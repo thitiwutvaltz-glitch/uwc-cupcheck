@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ตรวจนับถ้วยยา · U Well Care</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+:root{--ink:#1c2230;--muted:#667085;--line:#e3e7ee;--bg:#f3f5f8;--ok:#12805c;--ok-bg:#e6f6ef;--bad:#c0362c;--bad-bg:#fdecea;--warn:#a15c00;--warn-bg:#fff4e0;--pri:#0f6b5c;--pri-2:#e8f4f1}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);font-family:"Sarabun",system-ui,sans-serif;color:var(--ink);font-size:16px}
+.app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:120px}
+header{background:var(--pri);color:#fff;padding:12px 14px;position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px}
+header h1{font-size:18px;margin:0;flex:1;line-height:1.25}
+header .sub{font-size:13px;opacity:.85;font-weight:400}
+.me{background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:13px;white-space:nowrap}
+.back{background:none;border:0;color:#fff;font-size:26px;padding:0 4px 0 0;cursor:pointer;line-height:1}
+.tabs{display:flex;gap:6px;padding:10px 12px 0}
+.tab{flex:1;background:#fff;border-radius:10px;padding:9px 4px;font:inherit;font-size:14px;color:var(--muted);cursor:pointer;border:1px solid var(--line)}
+.tab.on{background:var(--pri);color:#fff;border-color:var(--pri);font-weight:600}
+.list{padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.cup{background:#fff;border-radius:14px;padding:12px 14px;border:1px solid var(--line);display:flex;gap:10px;align-items:center}
+.cup.tap{cursor:pointer}
+.cup .info{flex:1;min-width:0}
+.nm{font-weight:700;font-size:16px}
+.meta{font-size:13px;color:var(--muted)}
+.pill{display:inline-block;font-size:12px;border-radius:20px;padding:1px 8px;margin-top:4px}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.chev{color:#b4bcc8;font-size:24px}
+.round{font-size:14px;font-weight:700;color:var(--muted);margin:6px 2px -2px}
+.empty,.center{text-align:center;color:var(--muted);padding:40px 20px}
+.sec{background:#fff;margin:10px 12px;border-radius:14px;border:1px solid var(--line);padding:12px 14px}
+.sec h2{font-size:15px;margin:0 0 8px;color:var(--muted);font-weight:600}
+.drug{padding:10px 0;border-top:1px solid var(--line)}
+.drug:first-of-type{border-top:0}
+.dn{font-weight:700}
+.nums{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}
+.nb{height:48px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font:inherit;font-size:19px;font-weight:600;cursor:pointer;color:var(--ink)}
+.nb.on{background:var(--pri);border-color:var(--pri);color:#fff}
+.other{display:none;align-items:center;gap:10px;margin-top:8px}.other.show{display:flex}
+.step{width:48px;height:44px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-size:22px;cursor:pointer}
+.ov{font-size:22px;font-weight:700;min-width:50px;text-align:center}
+.photo{width:100%;max-height:320px;object-fit:cover;border-radius:12px;display:block;margin-bottom:8px}
+.btn{border:0;border-radius:12px;font:inherit;font-weight:700;font-size:17px;padding:13px 14px;cursor:pointer;display:block;text-align:center}
+.btn.sec2{background:var(--pri-2);color:var(--pri);width:100%}
+.btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+.btn.main{width:100%;background:var(--ok);color:#fff;font-size:19px}
+.btn.main:disabled{background:#c7ced8}
+.bottom{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:480px;background:#fff;border-top:1px solid var(--line);padding:10px 12px calc(14px + env(safe-area-inset-bottom));z-index:6}
+.hint{font-size:13px;color:var(--warn);text-align:center;margin-bottom:6px;min-height:18px}
+.res{margin:14px 12px;border-radius:16px;padding:20px 16px;text-align:center}
+.res.ok{background:var(--ok-bg);color:var(--ok)}.res.bad{background:var(--bad-bg);color:var(--bad)}
+.res .big{font-size:42px;line-height:1}.res h2{margin:8px 0 4px;font-size:22px}.res p{margin:4px 0;color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+th{font-size:13px;color:var(--muted);font-weight:600}td.n{text-align:center;font-weight:700}
+tr.x td{background:var(--bad-bg)}
+.note{font-size:13px;color:var(--muted);margin:8px 14px}
+.names{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.names button{border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:14px 8px;font:inherit;font-size:16px;font-weight:600;cursor:pointer}
+.names button.on{border-color:var(--pri);background:var(--pri-2);color:var(--pri)}
+.modal{position:fixed;inset:0;background:rgba(15,20,30,.45);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.modal.show{display:flex}
+.sheet{background:#fff;width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+.sheet h3{margin:0 0 6px}.acts{display:flex;gap:8px;margin-top:14px}.acts .btn{flex:1}
+.err{background:var(--bad-bg);color:var(--bad);border-radius:10px;padding:10px 12px;margin:10px 12px;font-size:14px}
+.spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--pri);border-radius:50%;animation:s 1s linear infinite;margin:0 auto 10px}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="app" id="app"><div class="center"><div class="spin"></div>กำลังเปิด…</div></div>
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<script src="config.js"></script>
+<script>
+const C = window.CUPCHECK_CONFIG || {};
+let ME = null, cups = [], view = {screen:'list', tab:'รอตรวจ'}, work = null, busy = false, lastErr = '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const fmt = n => n === 0.5 ? '½' : (n % 1 === 0.5 ? Math.floor(n) + '½' : String(n));
+
+async function api(action, data){
+  const r = await fetch(C.API_URL, {method:'POST', body: JSON.stringify(Object.assign({action, idToken: liff.getIDToken()}, data||{}))});
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'ระบบขัดข้อง');
+  return j;
+}
+function loading(t){ $('app').innerHTML = `<div class="center"><div class="spin"></div>${t||'กำลังโหลด…'}</div>`; }
+function head(title, sub, back){ return `<header>${back?'<button class="back" onclick="goList()" aria-label="กลับ">‹</button>':''}<h1>${title}<div class="sub">${sub||''}</div></h1>${ME?`<span class="me">👤 ${esc(ME)}</span>`:''}</header>`; }
+function errBox(){ return lastErr ? `<div class="err">⚠️ ${esc(lastErr)}</div>` : ''; }
+
+async function start(){
+  try{
+    if (!C.LIFF_ID || !C.API_URL) throw new Error('ยังไม่ได้ตั้งค่า LIFF_ID / API_URL');
+    await liff.init({liffId: C.LIFF_ID});
+    if (!liff.isLoggedIn()){ liff.login({redirectUri: location.href}); return; }
+    const me = await api('me');
+    if (me.status === 'approved'){ ME = me.name; await loadList(); }
+    else if (me.status === 'pending') showPending(me.name);
+    else showRegister(me);
+  }catch(e){ $('app').innerHTML = head('ตรวจนับถ้วยยา','ศรีนครินทร์') + `<div class="err">⚠️ ${esc(e.message)}</div><div class="sec"><button class="btn sec2" onclick="location.reload()">ลองใหม่</button></div>`; }
+}
+
+/* ---------- ลงทะเบียน ---------- */
+let regSel = null, regData = null;
+function showRegister(me){
+  regData = me || regData;
+  $('app').innerHTML = head('ลงทะเบียนครั้งแรก','ตรวจนับถ้วยยา · ศรีนครินทร์') + errBox() +
+  `<div class="sec"><h2>บัญชี LINE: ${esc(regData.lineName)}</h2><p style="margin:0 0 12px">เลือกชื่อของคุณ ทำครั้งเดียว แอดมินอนุมัติแล้วใช้งานได้เลย ไม่ต้องใส่รหัส</p>
+  <div class="names">${regData.nurses.map(n=>`<button class="${regSel===n.id?'on':''}" onclick="regSel='${esc(n.id)}';showRegister()">${esc(n.name)}</button>`).join('')}</div>
+  <button class="btn main" style="margin-top:14px" ${regSel?'':'disabled'} onclick="doRegister()">ส่งคำขอลงทะเบียน</button></div>`;
+}
+async function doRegister(){ try{ loading('กำลังส่ง…'); const r = await api('register',{staffId:regSel}); lastErr=''; showPending(r.name); }catch(e){ lastErr=e.message; showRegister(); } }
+function showPending(name){
+  $('app').innerHTML = head('รอแอดมินอนุมัติ','ตรวจนับถ้วยยา · ศรีนครินทร์') +
+  `<div class="sec"><div class="center" style="padding:16px 0"><div style="font-size:40px">⏳</div><p>ส่งคำขอในชื่อ <b>${esc(name)}</b> แล้ว<br>เมื่อแอดมินอนุมัติ กดปุ่มด้านล่างเพื่อเข้าใช้งาน</p></div>
+  <button class="btn sec2" onclick="loading();start()">ตรวจสถานะอีกครั้ง</button></div>`;
+}
+
+/* ---------- รายการถ้วย ---------- */
+async function loadList(){ loading(); try{ const r = await api('list'); cups = r.cups; lastErr=''; }catch(e){ lastErr = e.message; } renderList(); }
+function goList(){ view = {screen:'list', tab:view.tab||'รอตรวจ'}; loadList(); }
+function renderList(){
+  const n = s => cups.filter(c=>c.status===s).length;
+  const items = cups.filter(c=>c.status===view.tab);
+  let body = '', lastRound = '';
+  items.forEach(c=>{
+    if (c.round!==lastRound){ body += `<div class="round">มื้อ${esc(c.round)}</div>`; lastRound = c.round; }
+    const tag = c.status==='ไม่ตรง' ? `<span class="pill bad">❌ ${esc(c.note||'นับไม่ตรง')}</span>` : c.status==='ตรวจแล้ว' ? `<span class="pill ok">✅ ตรวจโดย ${esc(c.checkBy)}</span>` : '';
+    body += `<div class="cup ${c.status==='รอตรวจ'?'tap':''}" ${c.status==='รอตรวจ'?`onclick="openCup('${esc(c.id)}')"`:''}><div class="info">
+      <div class="nm">${esc(c.name)}</div><div class="meta">ห้อง ${esc(c.room)} · ${esc(c.timing)} · ${c.drugs.length} ตัวยา${c.prepAt?' · จัด '+esc(c.prepAt)+' น.':''}</div>${tag}</div>
+      ${c.status==='รอตรวจ'?'<span class="chev">›</span>':''}</div>`;
+  });
+  if (!items.length) body = `<div class="empty">${view.tab==='รอตรวจ'?'ไม่มีถ้วยรอตรวจตอนนี้':'ไม่มีรายการ'}</div>`;
+  $('app').innerHTML = head('ตรวจนับถ้วยยา','ศรีนครินทร์ · วันนี้') + errBox() +
+   `<div class="tabs">${['รอตรวจ','ไม่ตรง','ตรวจแล้ว'].map(t=>`<button class="tab ${view.tab===t?'on':''}" onclick="view.tab='${t}';renderList()">${t==='ไม่ตรง'?'ส่งกลับ':t} (${n(t)})</button>`).join('')}</div>
+   <div class="list">${body}</div><div class="bottom"><button class="btn ghost" style="width:100%" onclick="loadList()">↻ โหลดใหม่</button></div>`;
+}
+
+/* ---------- หน้าตรวจ ---------- */
+function openCup(id){ view = {screen:'check', cupId:id, tab:'รอตรวจ'}; work = {counts:{}, other:{}, photo:null}; renderCheck(true); }
+function renderCheck(top){
+  const c = cups.find(x=>x.id===view.cupId), y = window.scrollY;
+  const preset = [0,0.5,1,2,3];
+  const drugs = c.drugs.map(d=>{ const v = work.counts[d.id]; const isO = v!==undefined && !preset.includes(v);
+    return `<div class="drug"><div class="dn">${esc(d.n)}</div>
+     <div class="nums">${preset.map(p=>`<button class="nb ${v===p?'on':''}" onclick="setC('${esc(d.id)}',${p})">${fmt(p)}</button>`).join('')}
+     <button class="nb ${isO||work.other[d.id]?'on':''}" onclick="togO('${esc(d.id)}')">${isO?fmt(v):'อื่น'}</button></div>
+     <div class="other ${work.other[d.id]?'show':''}"><button class="step" onclick="stepC('${esc(d.id)}',-0.5)">−</button><span class="ov">${v===undefined?'–':fmt(v)}</span><button class="step" onclick="stepC('${esc(d.id)}',0.5)">+</button><span class="meta">ทีละ ½ เม็ด</span></div></div>`; }).join('');
+  const left = c.drugs.filter(d=>work.counts[d.id]===undefined).length;
+  const hint = [left?`ยังไม่ได้นับ ${left} ตัวยา`:'', !work.photo?'ยังไม่ถ่ายรูป':''].filter(Boolean).join(' · ');
+  $('app').innerHTML = head(esc(c.name), `ห้อง ${esc(c.room)} · ${esc(c.round)} ${esc(c.timing)}`, true) + errBox() +
+   `<div class="sec"><h2>นับเม็ดยาในถ้วยจริง แล้วแตะตัวเลข</h2>${drugs}</div>
+    <div class="sec"><h2>รูปถ้วยตอนตรวจ</h2>${work.photo?`<img class="photo" src="${work.photo}" alt="รูปถ้วย">`:''}
+     <label class="btn sec2">📷 ${work.photo?'ถ่ายใหม่':'ถ่ายรูป'}<input type="file" accept="image/*" capture="environment" style="display:none" onchange="gotPhoto(this)"></label>
+     <div class="meta" style="margin-top:6px">ถ่ายเฉพาะเม็ดยาในถ้วย ห้ามติดหน้าหรือชื่อคนไข้</div></div>
+    <div class="note">จำนวนที่ RN คนที่ 1 จัด จะเห็นหลังกดตรวจนับเสร็จ เพื่อให้นับเองจริง ๆ</div>
+    <div class="bottom"><div class="hint">${hint}</div><button class="btn main" ${hint||busy?'disabled':''} onclick="askSubmit()">✅ ตรวจนับเสร็จ</button></div>`;
+  window.scrollTo(0, top?0:y);
+}
+function setC(id,v){ work.counts[id]=v; work.other[id]=false; renderCheck(); }
+function togO(id){ work.other[id]=!work.other[id]; if (work.other[id] && work.counts[id]===undefined) work.counts[id]=4; renderCheck(); }
+function stepC(id,d){ work.counts[id]=Math.max(0,(work.counts[id]??4)+d); renderCheck(); }
+function gotPhoto(inp){
+  const f = inp.files && inp.files[0]; if (!f) return;
+  const img = new Image(); img.onload = () => {
+    const s = Math.min(1, 1280/Math.max(img.width,img.height)); const cv = document.createElement('canvas');
+    cv.width = Math.round(img.width*s); cv.height = Math.round(img.height*s); cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+    work.photo = cv.toDataURL('image/jpeg', 0.75); URL.revokeObjectURL(img.src); renderCheck();
+  }; img.src = URL.createObjectURL(f);
+}
+function askSubmit(){
+  openModal(`<h3>ยืนยันตรวจนับเสร็จ?</h3><p>หลังยืนยันจะแก้ตัวเลขไม่ได้ ระบบจะเทียบกับที่ RN คนที่ 1 จัดทันที</p>
+   <div class="acts"><button class="btn ghost" onclick="closeModal()">กลับไปนับ</button><button class="btn main" style="width:auto" onclick="closeModal();doSubmit()">ยืนยัน</button></div>`);
+}
+async function doSubmit(){
+  const c = cups.find(x=>x.id===view.cupId); busy = true; loading('กำลังส่งผลและรูป…');
+  try{
+    const r = await api('submit', {cupId:c.id, counts:work.counts, photo:work.photo}); lastErr=''; busy=false;
+    view = {screen:'result', cupId:c.id, tab:'รอตรวจ', r};
+    renderResult(c, r); notifyChat(c, r);
+  }catch(e){ busy=false; lastErr = e.message; renderCheck(true); }
+}
+function renderResult(c, r){
+  const rows = r.items.map(i=>`<tr class="${i.ok?'':'x'}"><td>${esc(i.n)}</td><td class="n">${fmt(i.prep)}</td><td class="n">${fmt(i.count)}${i.ok?'':' ❌'}</td></tr>`).join('');
+  $('app').innerHTML = head(esc(c.name), `ห้อง ${esc(c.room)} · ${esc(c.round)} ${esc(c.timing)}`, true) +
+   (r.match ? `<div class="res ok"><div class="big">✅</div><h2>นับตรงทุกตัวยา</h2><p>${fmt(r.total)} เม็ด · ส่งต่อให้ NA ได้</p></div>`
+            : `<div class="res bad"><div class="big">❌</div><h2>นับไม่ตรง ${r.bad} ตัวยา</h2><p>RN จัด ${fmt(r.prepTotal)} เม็ด · คุณนับได้ ${fmt(r.total)} เม็ด</p><p><b>ห้ามส่งถ้วยนี้ให้ NA</b> ถ้วยถูกส่งกลับไปขั้นจัดยาแล้ว</p></div>`) +
+   `<div class="sec"><h2>เทียบรายตัวยา</h2><table><tr><th>ยา</th><th style="text-align:center">RN จัด</th><th style="text-align:center">คุณนับ</th></tr>${rows}</table></div>
+    <div class="note" id="chatnote"></div>
+    <div class="bottom"><button class="btn main" style="background:var(--pri)" onclick="goList()">กลับหน้ารายการ</button></div>`;
+}
+async function notifyChat(c, r){
+  // ส่งข้อความในนามพยาบาลเข้าห้องแชทที่เปิดหน้านี้ (ไม่กินโควตา OA) — ทำได้เฉพาะเปิดจากในแชท
+  const note = $('chatnote');
+  try{
+    const ctx = liff.getContext();
+    if (!ctx || !['group','room','utou'].includes(ctx.type)) { if (note) note.textContent = 'เปิดจากนอกห้องแชท จึงไม่ได้แจ้งในกลุ่ม'; return; }
+    const txt = r.match ? `✅ ตรวจนับถ้วยแล้ว นับตรง\n${c.name} · ${c.round} ${c.timing}\nตรวจโดย ${ME}`
+                        : `❌ นับไม่ตรง ${r.bad} ตัวยา ส่งกลับจัดใหม่\n${c.name} · ${c.round} ${c.timing}\n${r.items.filter(i=>!i.ok).map(i=>`${i.n}: จัด ${fmt(i.prep)} / นับ ${fmt(i.count)}`).join('\n')}\nห้ามส่งให้ NA · ตรวจโดย ${ME}`;
+    await liff.sendMessages([{type:'text', text:txt}]);
+    if (note) note.textContent = 'แจ้งผลในกลุ่ม LINE แล้ว';
+  }catch(e){ if (note) note.textContent = 'แจ้งในกลุ่มไม่สำเร็จ (บันทึกผลในระบบแล้ว)'; }
+}
+function openModal(h){ $('sheet').innerHTML = h; $('modal').classList.add('show'); }
+function closeModal(){ $('modal').classList.remove('show'); }
+start();
+</script>
+</body>
+</html>
