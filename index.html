@@ -73,16 +73,18 @@ tr.x td{background:var(--bad-bg)}
 <body>
 <div class="app" id="app"><div class="center"><div class="spin"></div>กำลังเปิด…</div></div>
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
-<script src="config.js?v=2"></script>
+<script src="config.js?v=3"></script>
 <script>
 const C = window.CUPCHECK_CONFIG || {};
+const QS = new URLSearchParams(location.search); const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
 let ME = null, cups = [], view = {screen:'list', tab:'รอตรวจ'}, work = null, busy = false, lastErr = '';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const fmt = n => n === 0.5 ? '½' : (n % 1 === 0.5 ? Math.floor(n) + '½' : String(n));
 
 async function api(action, data){
-  const r = await fetch(C.API_URL, {method:'POST', body: JSON.stringify(Object.assign({action, idToken: liff.getIDToken()}, data||{}))});
+  const auth = WEB ? {key:WEB.key, by:WEB.by} : {idToken: liff.getIDToken()};
+  const r = await fetch(C.API_URL, {method:'POST', body: JSON.stringify(Object.assign({action}, auth, data||{}))});
   const j = await r.json();
   if (!j.ok) throw new Error(j.error || 'ระบบขัดข้อง');
   return j;
@@ -93,6 +95,9 @@ function errBox(){ return lastErr ? `<div class="err">⚠️ ${esc(lastErr)}</di
 
 async function start(){
   try{
+    if (WEB){ ME = WEB.by ? WEB.by.split('@')[0] : 'เครื่องเวร'; await loadList();
+      if (WEB.cup){ if (cups.find(c=>c.id===WEB.cup && c.status==='รอตรวจ')) openCup(WEB.cup); else { const c=cups.find(x=>x.id===WEB.cup); lastErr = c ? 'ถ้วยนี้สถานะ "'+c.status+'" แล้ว' : 'ไม่พบถ้วยนี้ในวันนี้'; renderList(); } }
+      return; }
     if (!C.LIFF_ID || !C.API_URL) throw new Error('ยังไม่ได้ตั้งค่า LIFF_ID / API_URL');
     if (!window.__liffReady){ await liff.init({liffId: C.LIFF_ID}); window.__liffReady = true; }
     if (!liff.isLoggedIn()){ liff.login({redirectUri: location.href}); return; }
@@ -195,6 +200,7 @@ function renderResult(c, r){
 async function notifyChat(c, r){
   // ส่งข้อความในนามพยาบาลเข้าห้องแชทที่เปิดหน้านี้ (ไม่กินโควตา OA) — ทำได้เฉพาะเปิดจากในแชท
   const note = $('chatnote');
+  if (WEB){ if (note) note.textContent = 'บันทึกผลในระบบแล้ว · ปิดหน้านี้เพื่อกลับแอประบบยา'; return; }
   try{
     const ctx = liff.getContext();
     if (!ctx || !['group','room','utou'].includes(ctx.type)) { if (note) note.textContent = 'เปิดจากนอกห้องแชท จึงไม่ได้แจ้งในกลุ่ม'; return; }
