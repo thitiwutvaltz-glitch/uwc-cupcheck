@@ -83,7 +83,7 @@ tr.x td{background:var(--bad-bg)}
 <script src="config.js?v=3"></script>
 <script>
 const C = window.CUPCHECK_CONFIG || {};
-const QS = new URLSearchParams(location.search); const PREP = QS.get('m')==='prep'; const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
+const QS = new URLSearchParams(location.search); const PREP = QS.get('m')==='prep'; if (PREP) document.title = 'จัดยาใส่ถ้วย · U Well Care'; const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
 let ME = null, cups = [], view = {screen:'list', tab:'รอตรวจ'}, work = null, busy = false, lastErr = '';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
