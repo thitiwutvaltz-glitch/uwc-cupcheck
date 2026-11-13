@@ -68,6 +68,13 @@ tr.x td{background:var(--bad-bg)}
 .err{background:var(--bad-bg);color:var(--bad);border-radius:10px;padding:10px 12px;margin:10px 12px;font-size:14px}
 .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--pri);border-radius:50%;animation:s 1s linear infinite;margin:0 auto 10px}
 @keyframes s{to{transform:rotate(360deg)}}
+.pd{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+.pd:first-of-type{border-top:0}
+.pd .q{min-width:64px;height:56px;border-radius:12px;background:var(--pri-2);color:var(--pri);font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.pd .q small{font-size:12px;font-weight:600;margin-left:3px}
+.pd .t{flex:1;min-width:0}.pd .ck{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
+.pd.on .ck{background:var(--ok);border-color:var(--ok)}.pd.on .q{background:var(--ok-bg);color:var(--ok)}
+.pd .fix{font-size:13px;color:var(--bad);background:var(--bad-bg);border-radius:8px;padding:3px 8px;margin-top:4px;display:inline-block}
 </style>
 </head>
 <body>
@@ -76,7 +83,7 @@ tr.x td{background:var(--bad-bg)}
 <script src="config.js?v=3"></script>
 <script>
 const C = window.CUPCHECK_CONFIG || {};
-const QS = new URLSearchParams(location.search); const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
+const QS = new URLSearchParams(location.search); const PREP = QS.get('m')==='prep'; const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
 let ME = null, cups = [], view = {screen:'list', tab:'รอตรวจ'}, work = null, busy = false, lastErr = '';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -95,6 +102,9 @@ function errBox(){ return lastErr ? `<div class="err">⚠️ ${esc(lastErr)}</di
 
 async function start(){
   try{
+    if (WEB && PREP){ ME = WEB.by ? WEB.by.split('@')[0] : 'เครื่องเวร'; view = {screen:'list', tab:'รอจัด'}; await loadList();
+      if (WEB.cup){ const c=cups.find(x=>x.id===WEB.cup); if (c && ['รอจัด','ไม่ตรง'].includes(c.status)) openPrep(WEB.cup); else { lastErr = c ? 'ถ้วยนี้สถานะ "'+c.status+'" แล้ว' : 'ไม่พบถ้วยนี้ในวันนี้'; renderList(); } }
+      return; }
     if (WEB){ ME = WEB.by ? WEB.by.split('@')[0] : 'เครื่องเวร'; await loadList();
       if (WEB.cup){ if (cups.find(c=>c.id===WEB.cup && c.status==='รอตรวจ')) openCup(WEB.cup); else { const c=cups.find(x=>x.id===WEB.cup); lastErr = c ? 'ถ้วยนี้สถานะ "'+c.status+'" แล้ว' : 'ไม่พบถ้วยนี้ในวันนี้'; renderList(); } }
       return; }
@@ -125,9 +135,9 @@ function showPending(name){
 }
 
 /* ---------- รายการถ้วย ---------- */
-async function loadList(){ loading(); try{ const r = await api('list'); cups = r.cups; lastErr=''; }catch(e){ lastErr = e.message; } renderList(); }
-function goList(){ view = {screen:'list', tab:view.tab||'รอตรวจ'}; loadList(); }
-function renderList(){
+async function loadList(){ loading(); try{ const r = await api('list', PREP?{mode:'prep'}:{}); cups = r.cups; lastErr=''; }catch(e){ lastErr = e.message; } renderList(); }
+function goList(){ view = {screen:'list', tab:view.tab||(PREP?'รอจัด':'รอตรวจ')}; loadList(); }
+function renderList(){ if (PREP) return renderPrepList();
   const n = s => cups.filter(c=>c.status===s).length;
   const items = cups.filter(c=>c.status===view.tab);
   let body = '', lastRound = '';
@@ -173,15 +183,15 @@ function gotPhoto(inp){
   const img = new Image(); img.onload = () => {
     const s = Math.min(1, 1024/Math.max(img.width,img.height)); const cv = document.createElement('canvas');
     cv.width = Math.round(img.width*s); cv.height = Math.round(img.height*s); cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
-    work.photo = cv.toDataURL('image/jpeg', 0.7); URL.revokeObjectURL(img.src); upload(); renderCheck();
+    work.photo = cv.toDataURL('image/jpeg', 0.7); URL.revokeObjectURL(img.src); upload(); rerender();
   }; img.src = URL.createObjectURL(f);
 }
 // อัปโหลดรูปทันทีที่ถ่าย ระหว่างที่ยังนับยาอยู่ — ตอนกดตรวจนับเสร็จจะได้ไม่ต้องรอรูป
 function upload(){
   const w = work, photo = w.photo; w.file = null; w.upErr = '';
-  const p = api('photo', {cupId:view.cupId, photo}).then(r => { if (w.photo===photo){ w.file = r.file; } return r.file; })
+  const p = api('photo', {cupId:view.cupId, photo, kind:w.kind||'check'}).then(r => { if (w.photo===photo){ w.file = r.file; } return r.file; })
     .catch(e => { if (w.photo===photo){ w.upErr = e.message; } throw e; })
-    .finally(() => { if (view.screen==='check' && work===w) renderCheck(); });
+    .finally(() => { if (work===w) rerender(); });
   w.up = p; p.catch(()=>{});
 }
 function photoState(){
@@ -226,6 +236,55 @@ async function notifyChat(c, r){
     if (note) note.textContent = 'แจ้งผลในกลุ่ม LINE แล้ว';
   }catch(e){ if (note) note.textContent = 'แจ้งในกลุ่มไม่สำเร็จ (บันทึกผลในระบบแล้ว)'; }
 }
+
+/* ---------- โหมดจัดยา (RN คนที่ 1) ---------- */
+function renderPrepList(){
+  const n = s => cups.filter(c=>c.status===s).length;
+  const items = cups.filter(c=>c.status===view.tab); const can = s => s==='รอจัด'||s==='ไม่ตรง';
+  let body = '', lastRound = '';
+  items.forEach(c=>{
+    if (c.round!==lastRound){ body += `<div class="round">มื้อ${esc(c.round)}</div>`; lastRound = c.round; }
+    const tag = c.status==='ไม่ตรง' ? `<span class="pill bad">❌ ตรวจนับไม่ตรง ต้องจัดใหม่</span>` : c.status==='รอตรวจ' ? `<span class="pill ok">ส่งตรวจแล้ว${c.prepAt?' '+esc(c.prepAt)+' น.':''}</span>` : '';
+    body += `<div class="cup ${can(c.status)?'tap':''}" ${can(c.status)?`onclick="openPrep('${esc(c.id)}')"`:''}><div class="info">
+      <div class="nm">${esc(c.name)}</div><div class="meta">ห้อง ${esc(c.room)} · ${esc(c.timing)} · ${c.drugs.length} ตัวยา</div>${tag}</div>
+      ${can(c.status)?'<span class="chev">›</span>':''}</div>`;
+  });
+  if (!items.length) body = `<div class="empty">ไม่มีรายการ</div>`;
+  $('app').innerHTML = head('จัดยาใส่ถ้วย','ศรีนครินทร์ · วันนี้') + errBox() +
+   `<div class="tabs">${['รอจัด','ไม่ตรง','รอตรวจ'].map(t=>`<button class="tab ${view.tab===t?'on':''}" onclick="view.tab='${t}';renderList()">${t==='ไม่ตรง'?'ถูกส่งกลับ':t==='รอตรวจ'?'ส่งตรวจแล้ว':t} (${n(t)})</button>`).join('')}</div>
+   <div class="list">${body}</div><div class="bottom"><button class="btn ghost" style="width:100%" onclick="loadList()">↻ โหลดใหม่</button></div>`;
+}
+function openPrep(id){ view = {screen:'prep', cupId:id, tab:view.tab||'รอจัด'}; work = {done:{}, photo:null, up:null, file:null, upErr:'', kind:'prep'}; renderPrep(true); }
+function renderPrep(top){
+  const c = cups.find(x=>x.id===view.cupId), y = window.scrollY;
+  const drugs = c.drugs.map(d=>`<div class="pd ${work.done[d.id]?'on':''}" onclick="work.done['${esc(d.id)}']=!work.done['${esc(d.id)}'];renderPrep()">
+     <div class="q">${fmt(d.q)}<small>เม็ด</small></div><div class="t"><div class="dn">${esc(d.n)}</div>
+     ${d.bad?`<span class="fix">ตรวจนับได้ ${d.c===null?'–':fmt(d.c)} เม็ด · ต้องเป็น ${fmt(d.q)} เม็ด</span>`:''}</div><div class="ck">✓</div></div>`).join('');
+  const left = c.drugs.filter(d=>!work.done[d.id]).length;
+  const hint = [left?`ยังไม่ได้ติ๊ก ${left} ตัวยา`:'', !work.photo?'ยังไม่ถ่ายรูป':''].filter(Boolean).join(' · ');
+  $('app').innerHTML = head(esc(c.name), `ห้อง ${esc(c.room)} · ${esc(c.round)} ${esc(c.timing)}`, true) + errBox() +
+   (c.status==='ไม่ตรง' ? `<div class="err">❌ ถ้วยนี้ถูกส่งกลับ ตรวจนับไม่ตรง ${c.drugs.filter(d=>d.bad).length||''} ตัวยา (ดูช่องสีแดง)${c.checkBy?' · ตรวจโดย '+esc(String(c.checkBy).split('@')[0]):''}<br>แก้ยาในถ้วยให้ตรงจำนวน แล้วถ่ายรูปใหม่</div>` : '') +
+   `<div class="sec"><h2>ใส่ยาตามจำนวน แล้วแตะติ๊กทีละตัว</h2>${drugs}</div>
+    <div class="sec"><h2>รูปถ้วยหลังจัด</h2>${work.photo?`<img class="photo" src="${work.photo}" alt="รูปถ้วย">`:''}
+     <label class="btn sec2">📷 ${work.photo?'ถ่ายใหม่':'ถ่ายรูป'}<input type="file" accept="image/*" capture="environment" style="display:none" onchange="gotPhoto(this)"></label>${photoState()}
+     <div class="meta" style="margin-top:6px">ถ่ายเฉพาะเม็ดยาในถ้วย ห้ามติดหน้าหรือชื่อคนไข้</div></div>
+    <div class="bottom"><div class="hint">${hint}</div><button class="btn main" ${hint||busy?'disabled':''} onclick="doPrep()">✅ จัดเสร็จ ส่งตรวจ</button></div>`;
+  window.scrollTo(0, top?0:y);
+}
+async function doPrep(){
+  const c = cups.find(x=>x.id===view.cupId); busy = true; loading(work.file ? 'กำลังส่งตรวจ…' : 'กำลังบันทึกรูปและส่งตรวจ…');
+  try{
+    let file = work.file;
+    if (!file && work.up){ try{ file = await work.up; }catch(e){ file = null; } }
+    const r = await api('prepDone', file ? {cupId:c.id, photoFile:file} : {cupId:c.id, photo:work.photo}); lastErr=''; busy=false;
+    view = {screen:'done', cupId:c.id, tab:'รอจัด'};
+    $('app').innerHTML = head(esc(c.name), `ห้อง ${esc(c.room)} · ${esc(c.round)} ${esc(c.timing)}`, true) +
+      `<div class="res ok"><div class="big">📤</div><h2>ส่งตรวจแล้ว</h2><p>${c.drugs.length} ตัวยา · ${fmt(r.total)} เม็ด</p><p>ให้ RN อีกคนตรวจนับในเมนู 2️⃣</p></div>
+       <div class="note">บันทึกในระบบแล้ว · ปิดหน้านี้เพื่อกลับแอประบบยา</div>
+       <div class="bottom"><button class="btn main" style="background:var(--pri)" onclick="goList()">ถ้วยอื่น</button></div>`;
+  }catch(e){ busy=false; lastErr = e.message; renderPrep(true); }
+}
+function rerender(){ if (view.screen==='prep') renderPrep(); else if (view.screen==='check') renderCheck(); }
 function openModal(h){ $('sheet').innerHTML = h; $('modal').classList.add('show'); }
 function closeModal(){ $('modal').classList.remove('show'); }
 start();
