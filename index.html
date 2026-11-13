@@ -73,7 +73,7 @@ tr.x td{background:var(--bad-bg)}
 <body>
 <div class="app" id="app"><div class="center"><div class="spin"></div>กำลังเปิด…</div></div>
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
-<script src="config.js"></script>
+<script src="config.js?v=2"></script>
 <script>
 const C = window.CUPCHECK_CONFIG || {};
 let ME = null, cups = [], view = {screen:'list', tab:'รอตรวจ'}, work = null, busy = false, lastErr = '';
@@ -94,13 +94,13 @@ function errBox(){ return lastErr ? `<div class="err">⚠️ ${esc(lastErr)}</di
 async function start(){
   try{
     if (!C.LIFF_ID || !C.API_URL) throw new Error('ยังไม่ได้ตั้งค่า LIFF_ID / API_URL');
-    await liff.init({liffId: C.LIFF_ID});
+    if (!window.__liffReady){ await liff.init({liffId: C.LIFF_ID}); window.__liffReady = true; }
     if (!liff.isLoggedIn()){ liff.login({redirectUri: location.href}); return; }
     const me = await api('me');
     if (me.status === 'approved'){ ME = me.name; await loadList(); }
     else if (me.status === 'pending') showPending(me.name);
     else showRegister(me);
-  }catch(e){ $('app').innerHTML = head('ตรวจนับถ้วยยา','ศรีนครินทร์') + `<div class="err">⚠️ ${esc(e.message)}</div><div class="sec"><button class="btn sec2" onclick="location.reload()">ลองใหม่</button></div>`; }
+  }catch(e){ $('app').innerHTML = head('ตรวจนับถ้วยยา','ศรีนครินทร์') + `<div class="err">⚠️ ${esc(e.message)}<br><small>${esc(String(e.stack||'').split('\n')[0])}</small></div><div class="sec"><button class="btn sec2" onclick="location.reload()">ลองใหม่</button></div>`; }
 }
 
 /* ---------- ลงทะเบียน ---------- */
