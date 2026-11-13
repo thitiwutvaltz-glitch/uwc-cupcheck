@@ -11,7 +11,7 @@
 :root{--ink:#1c2230;--muted:#667085;--line:#e3e7ee;--bg:#f3f5f8;--ok:#12805c;--ok-bg:#e6f6ef;--bad:#c0362c;--bad-bg:#fdecea;--warn:#a15c00;--warn-bg:#fff4e0;--pri:#0f6b5c;--pri-2:#e8f4f1}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:var(--bg);font-family:"Sarabun",system-ui,sans-serif;color:var(--ink);font-size:16px}
-.app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:120px}
+.app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:180px}
 header{background:var(--pri);color:#fff;padding:12px 14px;position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px}
 header h1{font-size:18px;margin:0;flex:1;line-height:1.25}
 header .sub{font-size:13px;opacity:.85;font-weight:400}
@@ -83,8 +83,8 @@ tr.x td{background:var(--bad-bg)}
 <script src="config.js?v=3"></script>
 <script>
 const C = window.CUPCHECK_CONFIG || {};
-const QS = new URLSearchParams(location.search); const PREP = QS.get('m')==='prep'; if (PREP) document.title = 'จัดยาใส่ถ้วย · U Well Care'; const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
-let ME = null, cups = [], view = {screen:'list', tab:'รอตรวจ'}, work = null, busy = false, lastErr = '';
+const QS = new URLSearchParams(location.search); const PREP = QS.get('m')==='prep'; const RECV = QS.get('m')==='receive'; if (PREP) document.title = 'จัดยาใส่ถ้วย · U Well Care'; if (RECV) document.title = 'กระดานรับถ้วยยา · U Well Care'; const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
+let ME = null, NA = null, STAFF = [], cups = [], view = {screen:'list', tab:'รอตรวจ'}, work = null, busy = false, lastErr = '';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const fmt = n => n === 0.5 ? '½' : (n % 1 === 0.5 ? Math.floor(n) + '½' : String(n));
@@ -97,11 +97,12 @@ async function api(action, data){
   return j;
 }
 function loading(t){ $('app').innerHTML = `<div class="center"><div class="spin"></div>${t||'กำลังโหลด…'}</div>`; }
-function head(title, sub, back){ return `<header>${back?'<button class="back" onclick="goList()" aria-label="กลับ">‹</button>':''}<h1>${title}<div class="sub">${sub||''}</div></h1>${ME?`<span class="me">👤 ${esc(ME)}</span>`:''}</header>`; }
+function head(title, sub, back){ return `<header>${back?'<button class="back" onclick="goList()" aria-label="กลับ">‹</button>':''}<h1>${title}<div class="sub">${sub||''}</div></h1>${ME?`<span class="me" ${RECV?'onclick="pickNA()" style="cursor:pointer"':''}>👤 ${esc(ME)}${RECV?' ▾':''}</span>`:''}</header>`; }
 function errBox(){ return lastErr ? `<div class="err">⚠️ ${esc(lastErr)}</div>` : ''; }
 
 async function start(){
   try{
+    if (WEB && RECV){ view = {screen:'list', tab:'ตรวจแล้ว'}; NA = lsGet('uwc_na'); ME = NA || 'เลือกชื่อ'; await loadList(); if (!NA) pickNA(); return; }
     if (WEB && PREP){ ME = WEB.by ? WEB.by.split('@')[0] : 'เครื่องเวร'; view = {screen:'list', tab:'รอจัด'}; await loadList();
       if (WEB.cup){ const c=cups.find(x=>x.id===WEB.cup); if (c && ['รอจัด','ไม่ตรง'].includes(c.status)) openPrep(WEB.cup); else { lastErr = c ? 'ถ้วยนี้สถานะ "'+c.status+'" แล้ว' : 'ไม่พบถ้วยนี้ในวันนี้'; renderList(); } }
       return; }
@@ -135,9 +136,9 @@ function showPending(name){
 }
 
 /* ---------- รายการถ้วย ---------- */
-async function loadList(){ loading(); try{ const r = await api('list', PREP?{mode:'prep'}:{}); cups = r.cups; lastErr=''; }catch(e){ lastErr = e.message; } renderList(); }
-function goList(){ view = {screen:'list', tab:view.tab||(PREP?'รอจัด':'รอตรวจ')}; if (PREP && cups.length){ lastErr=''; renderList(); window.scrollTo(0,0); } else loadList(); }
-function renderList(){ if (PREP) return renderPrepList();
+async function loadList(){ loading(); try{ const r = await api('list', PREP?{mode:'prep'}:RECV?{mode:'receive'}:{}); if (r.staff) STAFF = r.staff; cups = r.cups; lastErr=''; }catch(e){ lastErr = e.message; } renderList(); }
+function goList(){ view = {screen:'list', tab:view.tab||(PREP?'รอจัด':RECV?'ตรวจแล้ว':'รอตรวจ')}; if ((PREP||RECV) && cups.length){ lastErr=''; renderList(); window.scrollTo(0,0); } else loadList(); }
+function renderList(){ if (PREP) return renderPrepList(); if (RECV) return renderRecvList();
   const n = s => cups.filter(c=>c.status===s).length;
   const items = cups.filter(c=>c.status===view.tab);
   let body = '', lastRound = '';
@@ -263,7 +264,7 @@ function renderPrep(top){
   const left = c.drugs.filter(d=>!work.done[d.id]).length;
   const hint = [left?`ยังไม่ได้ติ๊ก ${left} ตัวยา`:'', !work.photo?'ยังไม่ถ่ายรูป':''].filter(Boolean).join(' · ');
   $('app').innerHTML = head(esc(c.name), `ห้อง ${esc(c.room)} · ${esc(c.round)} ${esc(c.timing)}`, true) + errBox() +
-   (c.status==='ไม่ตรง' ? `<div class="err">❌ ถ้วยนี้ถูกส่งกลับ ตรวจนับไม่ตรง ${c.drugs.filter(d=>d.bad).length||''} ตัวยา (ดูช่องสีแดง)${c.checkBy?' · ตรวจโดย '+esc(String(c.checkBy).split('@')[0]):''}<br>แก้ยาในถ้วยให้ตรงจำนวน แล้วถ่ายรูปใหม่</div>` : '') +
+   (c.status==='ไม่ตรง' ? `<div class="err">❌ ถ้วยนี้ถูกส่งกลับ ${c.drugs.some(d=>d.bad) ? 'ตรวจนับไม่ตรง ' + c.drugs.filter(d=>d.bad).length + ' ตัวยา (ดูช่องสีแดง)' : esc(c.note||'')}${c.checkBy?' · ตรวจโดย '+esc(String(c.checkBy).split('@')[0]):''}<br>แก้ยาในถ้วยให้ตรงจำนวน แล้วถ่ายรูปใหม่</div>` : '') +
    `<div class="sec"><h2>ใส่ยาตามจำนวน แล้วแตะติ๊กทีละตัว</h2>${drugs}</div>
     <div class="sec"><h2>รูปถ้วยหลังจัด</h2>${work.photo?`<img class="photo" src="${work.photo}" alt="รูปถ้วย">`:''}
      <label class="btn sec2">📷 ${work.photo?'ถ่ายใหม่':'ถ่ายรูป'}<input type="file" accept="image/*" capture="environment" style="display:none" onchange="gotPhoto(this)"></label>${photoState()}
@@ -294,7 +295,77 @@ function nextPrep(id){
   const after = cups.slice(i+1).concat(cups.slice(0, Math.max(i,0)));
   return after.find(x=>x.status==='ไม่ตรง') || after.find(open) || null;
 }
-function rerender(){ if (view.screen==='prep') renderPrep(); else if (view.screen==='check') renderCheck(); }
+
+/* ---------- โหมด NA รับถ้วย (กระดานรับถ้วยยา) ---------- */
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function pickNA(){
+  const na = STAFF.filter(s=>s.p==='NA'), other = STAFF.filter(s=>s.p!=='NA');
+  const btns = a => a.map(s=>`<button class="${NA===s.n?'on':''}" onclick="setNA('${esc(s.n).replace(/'/g,"\\'")}')">${esc(s.n)}</button>`).join('');
+  openModal(`<h3>เลือกชื่อผู้รับถ้วย</h3><p class="meta" style="margin:0 0 10px">ชื่อจากรายชื่อพนักงานในแอปสาขา · เครื่องนี้จะจำไว้</p>
+    <div style="max-height:55vh;overflow:auto"><div class="names">${btns(na)}</div>${other.length?`<div class="round" style="margin:12px 2px 6px">ตำแหน่งอื่น</div><div class="names">${btns(other)}</div>`:''}</div>
+    ${NA?'<div class="acts"><button class="btn ghost" onclick="closeModal()">ปิด</button></div>':''}`);
+}
+function setNA(n){ NA = n; ME = n; lsSet('uwc_na', n); closeModal(); if (view.screen==='recv') renderRecv(); else renderList(); }
+function renderRecvList(){
+  const n = s => cups.filter(c=>c.status===s).length;
+  const items = cups.filter(c=>c.status===view.tab);
+  let body = '', lastRound = '';
+  items.forEach(c=>{
+    if (c.round!==lastRound){ body += `<div class="round">มื้อ${esc(c.round)}</div>`; lastRound = c.round; }
+    const can = c.status==='ตรวจแล้ว';
+    const tag = c.status==='รับแล้ว' ? `<span class="pill ok">✅ รับโดย ${esc(c.receiveBy)}${c.receiveAt?' '+esc(c.receiveAt)+' น.':''}</span>` : '';
+    body += `<div class="cup ${can?'tap':''}" ${can?`onclick="openRecv('${esc(c.id)}')"`:''}><div class="info">
+      <div class="nm">${esc(c.name)}</div><div class="meta">ห้อง ${esc(c.room)} · ${esc(c.timing)} · ${c.drugs.length} ตัวยา · ${fmt(c.drugs.reduce((a,d)=>a+d.q,0))} เม็ด</div>${tag}</div>
+      ${can?'<span class="chev">›</span>':''}</div>`;
+  });
+  if (!items.length) body = `<div class="empty">${view.tab==='ตรวจแล้ว'?'ยังไม่มีถ้วยที่พยาบาลตรวจเสร็จ':'ไม่มีรายการ'}</div>`;
+  $('app').innerHTML = head('กระดานรับถ้วยยา','ศรีนครินทร์ · วันนี้') + errBox() +
+   `<div class="tabs">${['ตรวจแล้ว','รับแล้ว'].map(t=>`<button class="tab ${view.tab===t?'on':''}" onclick="view.tab='${t}';renderList()">${t==='ตรวจแล้ว'?'รอรับ':t} (${n(t)})</button>`).join('')}</div>
+   <div class="list">${body}</div><div class="bottom"><button class="btn ghost" style="width:100%" onclick="loadList()">↻ โหลดใหม่</button></div>`;
+}
+function openRecv(id){ if (!NA) return pickNA(); view = {screen:'recv', cupId:id, tab:'ตรวจแล้ว'}; work = {done:{}, photo:null, up:null, file:null, upErr:'', kind:'receive'}; renderRecv(true); }
+function renderRecv(top){
+  const c = cups.find(x=>x.id===view.cupId), y = window.scrollY;
+  const drugs = c.drugs.map(d=>`<div class="pd ${work.done[d.id]?'on':''}" onclick="work.done['${esc(d.id)}']=!work.done['${esc(d.id)}'];renderRecv()">
+     <div class="q">${fmt(d.q)}<small>เม็ด</small></div><div class="t"><div class="dn">${esc(d.n)}</div></div><div class="ck">✓</div></div>`).join('');
+  const left = c.drugs.filter(d=>!work.done[d.id]).length;
+  const hint = [left?`ยังไม่ได้ติ๊ก ${left} ตัวยา`:'', !work.photo?'ยังไม่ถ่ายรูป':''].filter(Boolean).join(' · ');
+  $('app').innerHTML = head(esc(c.name), `ห้อง ${esc(c.room)} · ${esc(c.round)} ${esc(c.timing)}`, true) + errBox() +
+   `<div class="sec"><h2>ดูยาในถ้วยว่าตรงกับรายการ แล้วแตะติ๊กทีละตัว</h2>${drugs}
+     <div class="meta" style="margin-top:8px">รวม ${fmt(c.drugs.reduce((a,d)=>a+d.q,0))} เม็ด · พยาบาลตรวจแล้ว${c.checkBy?' ('+esc(String(c.checkBy).split('@')[0])+')':''}</div></div>
+    <div class="sec"><h2>รูปถ้วยตอนรับ</h2>${work.photo?`<img class="photo" src="${work.photo}" alt="รูปถ้วย">`:''}
+     <label class="btn sec2">📷 ${work.photo?'ถ่ายใหม่':'ถ่ายรูป'}<input type="file" accept="image/*" capture="environment" style="display:none" onchange="gotPhoto(this)"></label>${photoState()}</div>
+    <div class="bottom"><div class="hint">${hint}</div>
+     <button class="btn main" ${hint||busy?'disabled':''} onclick="doRecv(true)">✅ รับถ้วยแล้ว</button>
+     <button class="btn ghost" style="width:100%;margin-top:8px;color:var(--bad)" ${!work.photo||busy?'disabled':''} onclick="askBad()">⚠️ ยาไม่ตรง แจ้งพยาบาล</button></div>`;
+  window.scrollTo(0, top?0:y);
+}
+function askBad(){
+  openModal(`<h3>ยาในถ้วยไม่ตรง?</h3><p>ถ้วยจะถูกส่งกลับให้พยาบาลจัดใหม่ <b>ห้ามให้ยาจากถ้วยนี้</b></p>
+   <textarea id="badnote" rows="3" style="width:100%;font:inherit;padding:8px;border-radius:10px;border:1.5px solid var(--line)" placeholder="บอกสั้น ๆ เช่น เม็ดขาวขาด 1 เม็ด"></textarea>
+   <div class="acts"><button class="btn ghost" onclick="closeModal()">ยกเลิก</button><button class="btn main" style="width:auto;background:var(--bad)" onclick="const t=$('badnote').value;closeModal();doRecv(false,t)">ส่งกลับ</button></div>`);
+}
+async function doRecv(ok, note){
+  const c = cups.find(x=>x.id===view.cupId); busy = true; loading('กำลังบันทึก…');
+  try{
+    let file = work.file;
+    if (!file && work.up){ try{ file = await work.up; }catch(e){ file = null; } }
+    const base = {cupId:c.id, ok:!!ok, note:note||'', na:NA};
+    await api('receive', file ? Object.assign(base,{photoFile:file}) : Object.assign(base,{photo:work.photo})); lastErr=''; busy=false;
+    c.status = ok ? 'รับแล้ว' : 'ไม่ตรง'; c.receiveBy = NA; c.receiveAt = new Date().toTimeString().slice(0,5);
+    if (!ok) cups = cups.filter(x=>x.id!==c.id);
+    const nx = cups.find(x=>x.status==='ตรวจแล้ว' && x.round===c.round) || cups.find(x=>x.status==='ตรวจแล้ว');
+    view = {screen:'done', cupId:c.id, tab:'ตรวจแล้ว'};
+    $('app').innerHTML = head(esc(c.name), `ห้อง ${esc(c.room)} · ${esc(c.round)} ${esc(c.timing)}`, true) +
+      (ok ? `<div class="res ok"><div class="big">✅</div><h2>รับถ้วยแล้ว</h2><p>ไปให้ยาได้เลย แล้วบันทึกในข้อ 6 ตามปกติ</p></div>`
+          : `<div class="res bad"><div class="big">↩️</div><h2>ส่งกลับให้พยาบาลแล้ว</h2><p><b>ห้ามให้ยาจากถ้วยนี้</b> รอพยาบาลจัดใหม่</p></div>`) +
+      `<div class="bottom">${nx ? `<button class="btn main" onclick="openRecv('${esc(nx.id)}')">➡️ ถ้วยถัดไป: ${esc(nx.name)} · ${esc(nx.round)}</button>
+        <button class="btn ghost" style="width:100%;margin-top:8px" onclick="goList()">กลับกระดาน</button>`
+        : `<button class="btn main" style="background:var(--pri)" onclick="goList()">กลับกระดาน</button>`}</div>`;
+  }catch(e){ busy=false; lastErr = e.message; renderRecv(true); }
+}
+function rerender(){ if (view.screen==='recv') return renderRecv(); if (view.screen==='prep') renderPrep(); else if (view.screen==='check') renderCheck(); }
 function openModal(h){ $('sheet').innerHTML = h; $('modal').classList.add('show'); }
 function closeModal(){ $('modal').classList.remove('show'); }
 start();
