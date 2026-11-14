@@ -19,6 +19,17 @@ header .sub{font-size:13px;opacity:.85;font-weight:400}
 .back{background:none;border:0;color:#fff;font-size:26px;padding:0 4px 0 0;cursor:pointer;line-height:1}
 .tabs{display:flex;gap:6px;padding:10px 12px 0}
 .brbar{margin:10px 12px 0;padding:10px 12px;border-radius:10px;background:#fff7e6;border:1.5px solid #f0c36d;font-size:15px;cursor:pointer;display:flex;gap:6px;align-items:center}.brbar span{margin-left:auto;color:var(--pri);font-weight:600;font-size:13px}
+.rxs{margin:10px 12px 0;position:relative}.rxs input{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font:inherit;font-size:16px;background:#fff}
+.rxr{display:flex;align-items:center;gap:10px;background:#fff;margin:8px 12px;border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer}.rxr .nm{font-weight:700;font-size:17px}.rxr .mt{color:var(--muted);font-size:14px}
+.pill.warn{background:var(--warn-bg);color:var(--warn)}
+.rxm{background:#fff;margin:8px 12px;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px}.rxm.low{border-color:#f0c36d}.rxm.on{border-color:var(--ok);background:#f6fbf8}
+.rxm .nm{font-weight:700;font-size:16px}.rxm .mt{color:var(--muted);font-size:14px;margin-top:2px}
+.rxq{display:flex;align-items:center;gap:6px;margin-top:10px}.rxq input{width:84px;text-align:center;font:inherit;font-size:22px;font-weight:800;border:1.5px solid var(--line);border-radius:10px;padding:6px}
+.rxq button{border:1.5px solid var(--line);background:#fff;border-radius:10px;font:inherit;font-weight:700;font-size:15px;padding:9px 10px;cursor:pointer}
+.rxx{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;font-size:14px}.rxx input[type=month]{font:inherit;font-size:15px;border:1.5px solid var(--line);border-radius:10px;padding:6px 8px}
+.rxp{display:flex;gap:8px;flex-wrap:wrap}.rxp .ph{width:72px;height:72px;border-radius:10px;background:#eef1f5 center/cover;position:relative}.rxp .ph b{position:absolute;inset:auto 0 0 0;font-size:11px;text-align:center;background:#0008;color:#fff;border-radius:0 0 10px 10px}
+.rxp label{width:72px;height:72px;border-radius:10px;border:2px dashed #b9c2cf;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:var(--muted);cursor:pointer}.rxp label span{font-size:24px}
+.rxn{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:15px}
 .modebar{display:flex;gap:6px;padding:10px 12px 0}.modebar button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:9px 4px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}.modebar button.on{border-color:var(--pri);background:var(--pri);color:#fff}
 .tab{flex:1;background:#fff;border-radius:10px;padding:9px 4px;font:inherit;font-size:14px;color:var(--muted);cursor:pointer;border:1px solid var(--line)}
 .tab.on{background:var(--pri);color:#fff;border-color:var(--pri);font-weight:600}
@@ -88,7 +99,7 @@ const C = window.CUPCHECK_CONFIG || {};
 const QS = new URLSearchParams(location.search); (()=>{ const st = QS.get('liff.state'); if (st){ try{ new URLSearchParams(decodeURIComponent(st).replace(/^[^?]*\?/,'')).forEach((v,k)=>{ if(!QS.has(k)) QS.set(k,v); }); }catch(e){} } })(); const BR_TH = {Srinakarin:'ศรีนครินทร์', Victory:'อนุสาวรีย์', Rama3:'พระราม 3'};
 let BRANCH = BR_TH[QS.get('b')] ? QS.get('b') : null;
 const BTH = () => BR_TH[BRANCH] || BR_TH.Srinakarin;
-let PREP = QS.get('m')==='prep'; const RECV = QS.get('m')==='receive'; if (PREP) document.title = 'จัดยาใส่ถ้วย · U Well Care'; if (RECV) document.title = 'กระดานรับถ้วยยา · U Well Care'; const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
+let PREP = QS.get('m')==='prep'; let RX = QS.get('m')==='rx'; let RXR = [], rxQ = ''; const RECV = QS.get('m')==='receive'; if (PREP) document.title = 'จัดยาใส่ถ้วย · U Well Care'; if (RX) document.title = 'รับยาจากญาติ · U Well Care'; if (RECV) document.title = 'กระดานรับถ้วยยา · U Well Care'; const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
 let ME = null, NA = null, STAFF = [], cups = [], view = {screen:'list', tab:'รอตรวจ'}, work = null, busy = false, lastErr = '';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -103,10 +114,70 @@ async function api(action, data){
 }
 function loading(t){ $('app').innerHTML = `<div class="center"><div class="spin"></div>${t||'กำลังโหลด…'}</div>`; }
 function head(title, sub, back){ return `<header>${back?'<button class="back" onclick="goList()" aria-label="กลับ">‹</button>':''}<h1>${title}<div class="sub">${sub||''}</div></h1>${ME?`<span class="me" ${RECV?'onclick="pickNA()" style="cursor:pointer"':''}>👤 ${esc(ME)}${RECV?' ▾':''}</span>`:''}</header>`; }
-function modeBar(){ if (WEB || RECV) return ''; return `<div class="brbar" onclick="changeBranch()">📍 สาขา <b>${esc(BTH())}</b> <span>เปลี่ยนสาขา ▾</span></div><div class="modebar"><button class="${PREP?'on':''}" onclick="setMode(true)">📦 จัดยาใส่ถ้วย</button><button class="${PREP?'':'on'}" onclick="setMode(false)">🔍 ตรวจนับ</button></div>`; }
-function pickMode(){ $('app').innerHTML = head('ระบบถ้วยยา', BTH() + ' · วันนี้') + `<div class="sec"><h2>วันนี้จะทำอะไร</h2><button class="btn main" style="margin-bottom:10px" onclick="PREP=false;setMode(true)">📦 จัดยาใส่ถ้วย</button><button class="btn main" onclick="PREP=true;setMode(false)">🔍 ตรวจนับถ้วยยา</button><p class="meta">สลับได้ตลอดจากปุ่มด้านบนของรายชื่อ</p></div>`; }
-async function changeBranch(){ if (busy) return; const nb = await pickBranch(); BRANCH = nb; lsSet('uwc_branch', nb); cups = []; lastErr = ''; view = {screen:'list', tab: PREP?'รอจัด':'รอตรวจ'}; loadList(); }
-function setMode(p){ if (p===PREP || busy) return; PREP = p; cups = []; lastErr = ''; view = {screen:'list', tab: PREP?'รอจัด':'รอตรวจ'}; document.title = PREP ? 'จัดยาใส่ถ้วย · U Well Care' : 'ตรวจนับถ้วยยา · U Well Care'; loadList(); }
+function modeBar(){ if (WEB || RECV) return ''; return `<div class="brbar" onclick="changeBranch()">📍 สาขา <b>${esc(BTH())}</b> <span>เปลี่ยนสาขา ▾</span></div><div class="modebar"><button class="${PREP&&!RX?'on':''}" onclick="setMode('prep')">📦 จัดยา</button><button class="${!PREP&&!RX?'on':''}" onclick="setMode('check')">🔍 ตรวจนับ</button><button class="${RX?'on':''}" onclick="setMode('rx')">💊 รับยา</button></div>`; }
+function pickMode(){ $('app').innerHTML = head('ระบบถ้วยยา', BTH() + ' · วันนี้') + `<div class="sec"><h2>วันนี้จะทำอะไร</h2><button class="btn main" style="margin-bottom:10px" onclick="setMode('prep',1)">📦 จัดยาใส่ถ้วย</button><button class="btn main" style="margin-bottom:10px" onclick="setMode('check',1)">🔍 ตรวจนับถ้วยยา</button><button class="btn main" style="background:#2563a8" onclick="setMode('rx',1)">💊 รับยาจากญาติ</button><p class="meta">สลับได้ตลอดจากปุ่มด้านบนของรายชื่อ</p></div>`; }
+async function changeBranch(){ if (busy) return; const nb = await pickBranch(); BRANCH = nb; lsSet('uwc_branch', nb); cups = []; RXR = []; lastErr = ''; view = {screen:'list', tab: PREP?'รอจัด':'รอตรวจ'}; loadList(); }
+function setMode(m, force){ const cur = RX?'rx':PREP?'prep':'check'; if ((m===cur && !force) || busy) return; PREP = m==='prep'; RX = m==='rx'; cups = []; RXR = []; lastErr = ''; view = {screen:'list', tab: PREP?'รอจัด':'รอตรวจ'}; document.title = (RX ? 'รับยาจากญาติ' : PREP ? 'จัดยาใส่ถ้วย' : 'ตรวจนับถ้วยยา') + ' · U Well Care'; loadList(); }
+/* ---------- 💊 รับยาจากญาติ (เติมยาเดิม) ---------- */
+async function rxLoad(){ loading(); try{ const r = await api('rxResidents'); RXR = r.residents; lastErr=''; }catch(e){ lastErr = e.message; } renderRxList(); }
+function rxFilter(){ const q = rxQ.trim().toLowerCase(); return RXR.filter(r=>!q || (r.name+' '+r.room).toLowerCase().includes(q)); }
+function renderRxList(){
+  const items = rxFilter();
+  const rows = items.map(r=>`<div class="rxr" onclick="openRx('${esc(r.id)}')"><div style="flex:1"><div class="nm">${esc(r.name)}</div><div class="mt">ห้อง ${esc(r.room||'-')} · ยา ${r.n} ตัว</div>${r.low?`<span class="pill warn">⚠️ ยาใกล้หมด ${r.low} ตัว</span>`:''}</div><span style="font-size:22px;color:#98a2b3">›</span></div>`).join('');
+  $('app').innerHTML = head('รับยาจากญาติ', BTH() + ' · เติมยาเดิม') + modeBar() + errBox() +
+    `<div class="rxs"><input id="rxq" type="search" placeholder="🔎 พิมพ์ชื่อหรือห้อง" value="${esc(rxQ)}" oninput="rxQ=this.value;rxRows()"></div><div id="rxrows">${rows || '<p class="meta" style="text-align:center">ไม่พบคนไข้</p>'}</div><div style="height:90px"></div>` +
+    `<div class="bottom"><button class="btn ghost" style="width:100%" onclick="rxLoad()">↻ โหลดใหม่</button></div>`;
+}
+function rxRows(){ const el = $('rxrows'); if (!el) return; const items = rxFilter(); el.innerHTML = items.map(r=>`<div class="rxr" onclick="openRx('${esc(r.id)}')"><div style="flex:1"><div class="nm">${esc(r.name)}</div><div class="mt">ห้อง ${esc(r.room||'-')} · ยา ${r.n} ตัว</div>${r.low?`<span class="pill warn">⚠️ ยาใกล้หมด ${r.low} ตัว</span>`:''}</div><span style="font-size:22px;color:#98a2b3">›</span></div>`).join('') || '<p class="meta" style="text-align:center">ไม่พบคนไข้</p>'; }
+async function openRx(id){ loading(); try{ const r = await api('rxMeds',{residentId:id}); work = {rx:true, res:r.resident, meds:r.meds, qty:{}, exp:{}, dose:{}, photos:[], up:0, note:''}; lastErr=''; renderRx(); window.scrollTo(0,0); }catch(e){ lastErr = e.message; renderRxList(); } }
+function rxSet(id, v){ v = Math.max(0, Math.min(5000, Math.round(Number(v)||0))); if (v) work.qty[id] = v; else delete work.qty[id]; renderRx(); }
+function rxAdd(id, d){ rxSet(id, (work.qty[id]||0) + d); }
+function rxCount(){ return Object.keys(work.qty).length; }
+function renderRx(){
+  const w = work, n = rxCount(), up = w.up > 0, ok = n && w.photos.filter(p=>p.file).length && !up;
+  const meds = w.meds.map(m=>{ const q = w.qty[m.id]||0;
+    const bal = m.bal===null ? '' : `เหลือ ${fmt(m.bal)} ${esc(m.unit)}${m.days!==null && m.daily>0 ? ' · ~'+m.days+' วัน' : ''}`;
+    return `<div class="rxm ${q?'on':m.low?'low':''}"><div class="nm">${esc(m.name)}</div><div class="mt">${esc(m.dose||'')}${m.storage==='หัวเตียง'?' · หัวเตียง':''}</div>
+      ${bal?`<span class="pill ${m.low?'warn':'ok'}">${m.low?'⚠️ ':''}${bal}</span>`:''}
+      <div class="rxq"><input type="number" inputmode="numeric" min="0" value="${q||''}" placeholder="0" onchange="rxSet('${m.id}',this.value)"><span style="color:var(--muted)">${esc(m.unit)}</span>
+        <button onclick="rxAdd('${m.id}',10)">+10</button><button onclick="rxAdd('${m.id}',30)">+30</button>${q?`<button onclick="rxSet('${m.id}',0)" aria-label="ล้าง">✕</button>`:''}</div>
+      ${q?`<div class="rxx">หมดอายุ <input type="month" value="${esc(w.exp[m.id]||'')}" onchange="work.exp['${m.id}']=this.value"> <label><input type="checkbox" ${w.dose[m.id]?'checked':''} onchange="work.dose['${m.id}']=this.checked"> หมอเปลี่ยนขนาดยา</label>${q&&m.bal!==null?`<span style="color:var(--ok);font-weight:700">→ รวม ${fmt(m.bal+q)}</span>`:''}</div>`:''}
+    </div>`; }).join('');
+  const ph = w.photos.map((p,i)=>`<div class="ph" style="background-image:url(${p.thumb})">${p.file?'':`<b>${p.err?'⚠️ ลองใหม่':'กำลังส่ง…'}</b>`}</div>`).join('');
+  $('app').innerHTML = head(esc(w.res.name), `ห้อง ${esc(w.res.room||'-')} · ผู้รับ ${esc(ME||'')}`, true) + errBox() +
+    `<p class="meta" style="margin:10px 14px 0">ใส่จำนวนเฉพาะยาที่ญาตินำมา · ยาที่ใกล้หมดอยู่บนสุด</p>${meds || '<div class="sec">คนไข้นี้ยังไม่มียาในรายการ</div>'}
+    <div class="sec"><h2 style="margin:0 0 8px">📷 รูปยาที่รับ</h2><div class="rxp">${ph}<label><span>📷</span>ถ่ายรูป<input type="file" accept="image/*" capture="environment" style="display:none" onchange="rxPhoto(this)"></label></div>
+      <p class="meta" style="margin:8px 0">ถ่ายได้หลายรูป ให้เห็นฉลากยา</p><input class="rxn" placeholder="หมายเหตุ เช่น ญาติที่นำยามา" value="${esc(w.note)}" oninput="work.note=this.value"></div>
+    <div class="sec" style="background:#eef5fc;border-color:#cfe0f3;font-size:14px">ℹ️ ยาตัวใหม่ที่ยังไม่มีในรายการ หรือหมอเปลี่ยนมื้อ/ขนาด ให้เพิ่ม/แก้ในแอประบบยา</div><div style="height:100px"></div>
+    <div class="bottom"><div class="hint">${n?`รับยา ${n} รายการ`:'ยังไม่ได้ใส่จำนวน'} · ${w.photos.filter(p=>p.file).length?`รูป ${w.photos.filter(p=>p.file).length} รูป`:'ยังไม่ถ่ายรูป'}${up?' · กำลังส่งรูป…':''}</div><button class="btn main" ${ok?'':'disabled'} onclick="rxSave()">✅ บันทึกรับยา${n?' '+n+' รายการ':''}</button></div>`;
+}
+function rxPhoto(inp){
+  const f = inp.files && inp.files[0]; if (!f) return; const w = work;
+  const img = new Image(); img.onload = () => {
+    const s = Math.min(1, 1280/Math.max(img.width,img.height)); const cv = document.createElement('canvas');
+    cv.width = Math.round(img.width*s); cv.height = Math.round(img.height*s); cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+    const p = {thumb: cv.toDataURL('image/jpeg', 0.5), data: cv.toDataURL('image/jpeg', 0.75), file:null};
+    w.photos.push(p); URL.revokeObjectURL(img.src); rxUp(p); renderRx();
+  }; img.src = URL.createObjectURL(f);
+}
+async function rxUp(p){ const w = work; w.up++; p.err = false;
+  try{ const kind = w.photos.indexOf(p)===0 ? 'batch' : 'extra';
+    const r = await api('rxPhoto',{photo:p.data, kind}); p.file = r.file; p.data = null; }
+  catch(e){ p.err = true; lastErr = 'ส่งรูปไม่สำเร็จ แตะถ่ายรูปใหม่อีกครั้ง'; w.photos = w.photos.filter(x=>x!==p); }
+  w.up--; if (work===w) renderRx(); }
+async function rxSave(){
+  if (busy) return; const w = work; busy = true;
+  const items = Object.keys(w.qty).map(id=>({medId:id, qty:w.qty[id], expiry: w.exp[id] ? w.exp[id] + '-01' : '', doseChanged: !!w.dose[id]}));
+  loading('กำลังบันทึก…');
+  try{ const r = await api('rxSave',{residentId:w.res.id, items, photos:w.photos.map(p=>p.file).filter(Boolean), note:w.note});
+    busy = false; lastErr = ''; const rr = RXR.find(x=>x.id===w.res.id); if (rr) rr.low = Math.max(0, rr.low - r.items.length);
+    $('app').innerHTML = head(esc(w.res.name), `ห้อง ${esc(w.res.room||'-')}`, true) +
+      `<div class="sec"><div class="res ok"><div class="big">✅</div><h2>รับยาแล้ว ${r.items.length} รายการ</h2></div>` +
+      r.items.map(i=>`<div class="drug"><b>${esc(i.name)}</b><div class="meta">รับ ${fmt(i.qty)} · ${fmt(i.before)} → <b style="color:var(--ok)">${fmt(i.after)}</b>${i.days!==null?' · พอใช้ ~'+i.days+' วัน':''}</div></div>`).join('') +
+      `<p class="meta">ยอดในแอประบบยาจะอัปเดตภายใน 15 นาที</p></div><div class="sec"><button class="btn main" onclick="goList()">รับยาคนไข้คนถัดไป</button></div>`;
+    window.scrollTo(0,0);
+  }catch(e){ busy = false; lastErr = e.message; renderRx(); }
+}
 function errBox(){ return lastErr ? `<div class="err">⚠️ ${esc(lastErr)}</div>` : ''; }
 
 function pickBranch(){
@@ -152,9 +223,9 @@ function showPending(name){
 }
 
 /* ---------- รายการถ้วย ---------- */
-async function loadList(){ loading(); try{ const r = await api('list', PREP?{mode:'prep'}:RECV?{mode:'receive'}:{}); if (r.staff) STAFF = r.staff; cups = r.cups; lastErr=''; }catch(e){ lastErr = e.message; } renderList(); }
-function goList(){ view = {screen:'list', tab:view.tab||(PREP?'รอจัด':RECV?'ตรวจแล้ว':'รอตรวจ')}; if ((PREP||RECV) && cups.length){ lastErr=''; renderList(); window.scrollTo(0,0); } else loadList(); }
-function renderList(){ if (PREP) return renderPrepList(); if (RECV) return renderRecvList();
+async function loadList(){ if (RX) return rxLoad(); loading(); try{ const r = await api('list', PREP?{mode:'prep'}:RECV?{mode:'receive'}:{}); if (r.staff) STAFF = r.staff; cups = r.cups; lastErr=''; }catch(e){ lastErr = e.message; } renderList(); }
+function goList(){ if (RX){ work = null; if (RXR.length){ lastErr=''; renderRxList(); window.scrollTo(0,0); } else rxLoad(); return; } view = {screen:'list', tab:view.tab||(PREP?'รอจัด':RECV?'ตรวจแล้ว':'รอตรวจ')}; if ((PREP||RECV) && cups.length){ lastErr=''; renderList(); window.scrollTo(0,0); } else loadList(); }
+function renderList(){ if (RX) return renderRxList(); if (PREP) return renderPrepList(); if (RECV) return renderRecvList();
   const n = s => cups.filter(c=>c.status===s).length;
   const items = cups.filter(c=>c.status===view.tab);
   let body = '', lastRound = '';
