@@ -18,6 +18,7 @@ header .sub{font-size:13px;opacity:.85;font-weight:400}
 .me{background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:13px;white-space:nowrap}
 .back{background:none;border:0;color:#fff;font-size:26px;padding:0 4px 0 0;cursor:pointer;line-height:1}
 .tabs{display:flex;gap:6px;padding:10px 12px 0}
+.modebar{display:flex;gap:6px;padding:10px 12px 0}.modebar button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:9px 4px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}.modebar button.on{border-color:var(--pri);background:var(--pri);color:#fff}
 .tab{flex:1;background:#fff;border-radius:10px;padding:9px 4px;font:inherit;font-size:14px;color:var(--muted);cursor:pointer;border:1px solid var(--line)}
 .tab.on{background:var(--pri);color:#fff;border-color:var(--pri);font-weight:600}
 .list{padding:10px 12px;display:flex;flex-direction:column;gap:10px}
@@ -83,10 +84,10 @@ tr.x td{background:var(--bad-bg)}
 <script src="config.js?v=3"></script>
 <script>
 const C = window.CUPCHECK_CONFIG || {};
-const QS = new URLSearchParams(location.search); const BR_TH = {Srinakarin:'ศรีนครินทร์', Victory:'อนุสาวรีย์', Rama3:'พระราม 3'};
+const QS = new URLSearchParams(location.search); (()=>{ const st = QS.get('liff.state'); if (st){ try{ new URLSearchParams(decodeURIComponent(st).replace(/^[^?]*\?/,'')).forEach((v,k)=>{ if(!QS.has(k)) QS.set(k,v); }); }catch(e){} } })(); const BR_TH = {Srinakarin:'ศรีนครินทร์', Victory:'อนุสาวรีย์', Rama3:'พระราม 3'};
 let BRANCH = BR_TH[QS.get('b')] ? QS.get('b') : null;
 const BTH = () => BR_TH[BRANCH] || BR_TH.Srinakarin;
-const PREP = QS.get('m')==='prep'; const RECV = QS.get('m')==='receive'; if (PREP) document.title = 'จัดยาใส่ถ้วย · U Well Care'; if (RECV) document.title = 'กระดานรับถ้วยยา · U Well Care'; const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
+let PREP = QS.get('m')==='prep'; const RECV = QS.get('m')==='receive'; if (PREP) document.title = 'จัดยาใส่ถ้วย · U Well Care'; if (RECV) document.title = 'กระดานรับถ้วยยา · U Well Care'; const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
 let ME = null, NA = null, STAFF = [], cups = [], view = {screen:'list', tab:'รอตรวจ'}, work = null, busy = false, lastErr = '';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -101,6 +102,8 @@ async function api(action, data){
 }
 function loading(t){ $('app').innerHTML = `<div class="center"><div class="spin"></div>${t||'กำลังโหลด…'}</div>`; }
 function head(title, sub, back){ return `<header>${back?'<button class="back" onclick="goList()" aria-label="กลับ">‹</button>':''}<h1>${title}<div class="sub">${sub||''}</div></h1>${ME?`<span class="me" ${RECV?'onclick="pickNA()" style="cursor:pointer"':''}>👤 ${esc(ME)}${RECV?' ▾':''}</span>`:''}</header>`; }
+function modeBar(){ if (WEB || RECV) return ''; return `<div class="modebar"><button class="${PREP?'on':''}" onclick="setMode(true)">📦 จัดยาใส่ถ้วย</button><button class="${PREP?'':'on'}" onclick="setMode(false)">🔍 ตรวจนับ</button></div>`; }
+function setMode(p){ if (p===PREP || busy) return; PREP = p; cups = []; lastErr = ''; view = {screen:'list', tab: PREP?'รอจัด':'รอตรวจ'}; document.title = PREP ? 'จัดยาใส่ถ้วย · U Well Care' : 'ตรวจนับถ้วยยา · U Well Care'; loadList(); }
 function errBox(){ return lastErr ? `<div class="err">⚠️ ${esc(lastErr)}</div>` : ''; }
 
 function pickBranch(){
@@ -109,7 +112,7 @@ function pickBranch(){
 }
 async function start(){
   try{
-    if (WEB && !BRANCH){ BRANCH = BR_TH[lsGet('uwc_branch')] ? lsGet('uwc_branch') : await pickBranch(); }
+    if (!BRANCH){ BRANCH = BR_TH[lsGet('uwc_branch')] ? lsGet('uwc_branch') : await pickBranch(); }
     if (BRANCH) lsSet('uwc_branch', BRANCH);
     if (WEB && RECV){ view = {screen:'list', tab:'ตรวจแล้ว'}; NA = lsGet('uwc_na_' + BRANCH); ME = NA || 'เลือกชื่อ'; await loadList(); if (!NA) pickNA(); return; }
     if (WEB && PREP){ ME = WEB.by ? WEB.by.split('@')[0] : 'เครื่องเวร'; view = {screen:'list', tab:'รอจัด'}; await loadList();
@@ -122,7 +125,7 @@ async function start(){
     if (!window.__liffReady){ await liff.init({liffId: C.LIFF_ID}); window.__liffReady = true; }
     if (!liff.isLoggedIn()){ liff.login({redirectUri: location.href}); return; }
     const me = await api('me');
-    if (me.status === 'approved'){ ME = me.name; await loadList(); }
+    if (me.status === 'approved'){ ME = me.name; view = {screen:'list', tab: PREP?'รอจัด':'รอตรวจ'}; await loadList(); }
     else if (me.status === 'pending') showPending(me.name);
     else showRegister(me);
   }catch(e){ $('app').innerHTML = head('ตรวจนับถ้วยยา',BTH()) + `<div class="err">⚠️ ${esc(e.message)}<br><small>${esc(String(e.stack||'').split('\n')[0])}</small></div><div class="sec"><button class="btn sec2" onclick="location.reload()">ลองใหม่</button></div>`; }
@@ -159,7 +162,7 @@ function renderList(){ if (PREP) return renderPrepList(); if (RECV) return rende
       ${c.status==='รอตรวจ'?'<span class="chev">›</span>':''}</div>`;
   });
   if (!items.length) body = `<div class="empty">${view.tab==='รอตรวจ'?'ไม่มีถ้วยรอตรวจตอนนี้':'ไม่มีรายการ'}</div>`;
-  $('app').innerHTML = head('ตรวจนับถ้วยยา',BTH() + ' · วันนี้') + errBox() +
+  $('app').innerHTML = head('ตรวจนับถ้วยยา',BTH() + ' · วันนี้') + modeBar() + errBox() +
    `<div class="tabs">${['รอตรวจ','ไม่ตรง','ตรวจแล้ว'].map(t=>`<button class="tab ${view.tab===t?'on':''}" onclick="view.tab='${t}';renderList()">${t==='ไม่ตรง'?'ส่งกลับ':t} (${n(t)})</button>`).join('')}</div>
    <div class="list">${body}</div><div class="bottom"><button class="btn ghost" style="width:100%" onclick="loadList()">↻ โหลดใหม่</button></div>`;
 }
@@ -269,7 +272,7 @@ function renderPrepList(){
       ${can(c.status)?'<span class="chev">›</span>':''}</div>`;
   });
   if (!items.length) body = `<div class="empty">ไม่มีรายการ</div>`;
-  $('app').innerHTML = head('จัดยาใส่ถ้วย',BTH() + ' · วันนี้') + errBox() +
+  $('app').innerHTML = head('จัดยาใส่ถ้วย',BTH() + ' · วันนี้') + modeBar() + errBox() +
    `<div class="tabs">${['รอจัด','ไม่ตรง','รอตรวจ'].map(t=>`<button class="tab ${view.tab===t?'on':''}" onclick="view.tab='${t}';renderList()">${t==='ไม่ตรง'?'ถูกส่งกลับ':t==='รอตรวจ'?'ส่งตรวจแล้ว':t} (${n(t)})</button>`).join('')}</div>
    <div class="list">${body}</div><div class="bottom"><button class="btn ghost" style="width:100%" onclick="loadList()">↻ โหลดใหม่</button></div>`;
 }
@@ -300,7 +303,7 @@ async function doPrep(){
     const nx = nextPrep(c.id);
     view = {screen:'done', cupId:c.id, tab:view.tab||'รอจัด'};
     $('app').innerHTML = head(esc(c.name), `ห้อง ${esc(c.room)} · ${esc(c.round)} ${esc(c.timing)}`, true) +
-      `<div class="res ok"><div class="big">📤</div><h2>ส่งตรวจแล้ว</h2><p>${c.drugs.length} ตัวยา · ${fmt(r.total)} เม็ด</p><p>ให้ RN อีกคนตรวจนับในเมนู 2️⃣</p></div>
+      `<div class="res ok"><div class="big">📤</div><h2>ส่งตรวจแล้ว</h2><p>${c.drugs.length} ตัวยา · ${fmt(r.total)} เม็ด</p><p>${WEB ? 'ให้ RN อีกคนตรวจนับในเมนู 2️⃣' : 'ให้ RN อีกคนตรวจนับ (แท็บ 🔍 ตรวจนับ)'}</p></div>
        <div class="note">${nx ? 'เหลือรอจัดอีก ' + cups.filter(x=>x.status==='รอจัด'||x.status==='ไม่ตรง').length + ' ถ้วย' : '🎉 จัดครบทุกถ้วยแล้ว'}</div>
        <div class="bottom">${nx ? `<button class="btn main" onclick="openPrep('${esc(nx.id)}')">➡️ คนถัดไป: ${esc(nx.name)} · ${esc(nx.round)}</button>
         <button class="btn ghost" style="width:100%;margin-top:8px" onclick="goList()">กลับหน้ารายชื่อ</button>`
