@@ -136,7 +136,7 @@ function rxCount(){ return Object.keys(work.qty).length; }
 function renderRx(){
   const w = work, n = rxCount(), up = w.up > 0, ok = n && w.photos.filter(p=>p.file).length && !up;
   const meds = w.meds.map(m=>{ const q = w.qty[m.id]||0;
-    const bal = m.bal===null ? '' : `เหลือ ${fmt(m.bal)} ${esc(m.unit)}${m.days!==null && m.daily>0 ? ' · ~'+m.days+' วัน' : ''}`;
+    const bal = m.bal===null ? '' : m.bal < 0 ? `ยอดในระบบติดลบ ${fmt(-m.bal)} (ควรนับยืนยันในแอป)` : m.bal === 0 ? 'หมดแล้ว' : `เหลือ ${fmt(m.bal)} ${esc(m.unit)}${m.days!==null && m.daily>0 ? ' · ~'+m.days+' วัน' : ''}`;
     return `<div class="rxm ${q?'on':m.low?'low':''}"><div class="nm">${esc(m.name)}</div><div class="mt">${esc(m.dose||'')}${m.storage==='หัวเตียง'?' · หัวเตียง':''}</div>
       ${bal?`<span class="pill ${m.low?'warn':'ok'}">${m.low?'⚠️ ':''}${bal}</span>`:''}
       <div class="rxq"><input type="number" inputmode="numeric" min="0" value="${q||''}" placeholder="0" onchange="rxSet('${m.id}',this.value)"><span style="color:var(--muted)">${esc(m.unit)}</span>
