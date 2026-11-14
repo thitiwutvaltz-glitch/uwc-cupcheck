@@ -128,7 +128,8 @@ async function start(){
     const me = await api('me');
     if (me.status === 'approved'){ ME = me.name; if (!QS.get('m')) return pickMode(); view = {screen:'list', tab: PREP?'รอจัด':'รอตรวจ'}; await loadList(); }
     else if (me.status === 'pending') showPending(me.name);
-    else showRegister(me);
+    else if (me.status === 'new' && Array.isArray(me.nurses)) showRegister(me);
+    else throw new Error('สถานะบัญชี LINE ไม่ถูกต้อง (' + JSON.stringify(me).slice(0,160) + ') กรุณาแคปหน้านี้ส่งแอดมิน');
   }catch(e){ $('app').innerHTML = head('ตรวจนับถ้วยยา',BTH()) + `<div class="err">⚠️ ${esc(e.message)}<br><small>${esc(String(e.stack||'').split('\n')[0])}</small></div><div class="sec"><button class="btn sec2" onclick="location.reload()">ลองใหม่</button></div>`; }
 }
 
@@ -138,7 +139,7 @@ function showRegister(me){
   regData = me || regData;
   $('app').innerHTML = head('ลงทะเบียนครั้งแรก','ตรวจนับถ้วยยา · ' + BTH()) + errBox() +
   `<div class="sec"><h2>บัญชี LINE: ${esc(regData.lineName)}</h2><p style="margin:0 0 12px">เลือกชื่อของคุณ ทำครั้งเดียว แอดมินอนุมัติแล้วใช้งานได้เลย ไม่ต้องใส่รหัส</p>
-  <div class="names">${regData.nurses.map(n=>`<button class="${regSel===n.id?'on':''}" onclick="regSel='${esc(n.id)}';showRegister()">${esc(n.name)}</button>`).join('')}</div>
+  <div class="names">${(regData.nurses||[]).map(n=>`<button class="${regSel===n.id?'on':''}" onclick="regSel='${esc(n.id)}';showRegister()">${esc(n.name)}</button>`).join('')}</div>
   <button class="btn main" style="margin-top:14px" ${regSel?'':'disabled'} onclick="doRegister()">ส่งคำขอลงทะเบียน</button></div>`;
 }
 async function doRegister(){ try{ loading('กำลังส่ง…'); const r = await api('register',{staffId:regSel}); lastErr=''; if (r.status==='approved') return start(); showPending(r.name); }catch(e){ lastErr=e.message; showRegister(); } }
