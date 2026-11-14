@@ -243,7 +243,7 @@ let regSel = null, regData = null;
 function showRegister(me){
   regData = me || regData;
   $('app').innerHTML = head('ลงทะเบียนครั้งแรก','ตรวจนับถ้วยยา · ' + BTH()) + errBox() +
-  `<div class="sec"><h2>บัญชี LINE: ${esc(regData.lineName)}</h2><p style="margin:0 0 12px">เลือกชื่อของคุณ ทำครั้งเดียว แอดมินอนุมัติแล้วใช้งานได้เลย ไม่ต้องใส่รหัส</p>
+  `<div class="sec"><h2>บัญชี LINE: ${esc(regData.lineName)}</h2><p style="margin:0 0 12px">เลือกชื่อของคุณ ทำครั้งเดียว ใช้งานได้ทันที ไม่ต้องใส่รหัส</p>
   <div class="names">${(regData.nurses||[]).map(n=>`<button class="${regSel===n.id?'on':''}" onclick="regSel='${esc(n.id)}';showRegister()">${esc(n.name)}</button>`).join('')}</div>
   <button class="btn main" style="margin-top:14px" ${regSel?'':'disabled'} onclick="doRegister()">ส่งคำขอลงทะเบียน</button></div>`;
 }
