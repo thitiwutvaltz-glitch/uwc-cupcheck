@@ -88,6 +88,18 @@ tr.x td{background:var(--bad-bg)}
 .pd .t{flex:1;min-width:0}.pd .ck{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff}
 .pd.on .ck{background:var(--ok);border-color:var(--ok)}.pd.on .q{background:var(--ok-bg);color:var(--ok)}
 .pd .fix{font-size:13px;color:var(--bad);background:var(--bad-bg);border-radius:8px;padding:3px 8px;margin-top:4px;display:inline-block}
+.rxr{gap:12px}.rxr .rm{width:52px;height:52px;border-radius:12px;background:var(--pri-2);color:var(--pri);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:17px;line-height:1.1;flex:none}.rxr .rm small{font-size:10px;font-weight:600}
+.rxr .lowb{background:var(--warn-bg);color:var(--warn);font-size:13px;font-weight:700;border-radius:20px;padding:3px 9px;white-space:nowrap}.rxr .chev{font-size:24px;color:#98a2b3}
+.rxf{display:flex;gap:8px;margin:10px 12px 0}.rxf button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:8px 6px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}.rxf button.on{background:var(--pri);border-color:var(--pri);color:#fff}.rxf button.on.warn{background:var(--warn);border-color:var(--warn)}
+.rxst{display:flex;margin:10px 12px 0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px}.rxst div{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;color:var(--muted);font-weight:600}.rxst i{font-style:normal;width:22px;height:22px;border-radius:50%;border:1.5px solid #c4ccd8;display:flex;align-items:center;justify-content:center;font-size:12px}.rxst .done{color:var(--ok)}.rxst .done i{background:var(--ok);border-color:var(--ok);color:#fff}
+.rxg{margin:14px 16px 0;font-size:14px;font-weight:700;color:var(--muted)}.rxg.warn{color:var(--warn)}
+.rxh{display:flex;gap:10px;align-items:flex-start}
+.bal{min-width:86px;border-radius:12px;padding:6px 8px;text-align:center;display:flex;flex-direction:column;line-height:1.15;flex:none}.bal b{font-size:26px;font-weight:800}.bal small{font-size:11.5px;font-weight:600}
+.bal.ok{background:var(--ok-bg);color:var(--ok)}.bal.warn{background:var(--warn-bg);color:var(--warn)}.bal.bad{background:var(--bad-bg);color:var(--bad)}.bal.na{background:#f1f3f6;color:var(--muted)}
+.rxq .lb{font-size:14px;color:var(--muted);font-weight:600;margin-right:2px}.rxq .pm{width:44px;height:44px;font-size:22px;padding:0;line-height:1}.rxq input{height:44px}.rxq .un{color:var(--muted)}
+.rxc{display:flex;gap:6px;margin-top:8px}.rxc button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:10px;font:inherit;font-weight:700;font-size:15px;padding:8px 4px;cursor:pointer}.rxc .clr{color:var(--bad);flex:.8}
+.rxa{margin-top:10px;background:var(--ok-bg);color:var(--ok);border-radius:10px;padding:8px 10px;font-size:15px}.rxa small{color:var(--muted)}
+.btn.cam{display:block;background:var(--pri)}
 </style>
 </head>
 <body>
@@ -120,36 +132,56 @@ async function changeBranch(){ if (busy) return; const nb = await pickBranch(); 
 function setMode(m, force){ const cur = RX?'rx':PREP?'prep':'check'; if ((m===cur && !force) || busy) return; PREP = m==='prep'; RX = m==='rx'; cups = []; RXR = []; lastErr = ''; view = {screen:'list', tab: PREP?'รอจัด':'รอตรวจ'}; document.title = (RX ? 'รับยาจากญาติ' : PREP ? 'จัดยาใส่ถ้วย' : 'ตรวจนับถ้วยยา') + ' · U Well Care'; loadList(); }
 /* ---------- 💊 รับยาจากญาติ (เติมยาเดิม) ---------- */
 async function rxLoad(){ loading(); try{ const r = await api('rxResidents'); RXR = r.residents; lastErr=''; }catch(e){ lastErr = e.message; } renderRxList(); }
-function rxFilter(){ const q = rxQ.trim().toLowerCase(); return RXR.filter(r=>!q || (r.name+' '+r.room).toLowerCase().includes(q)); }
+let rxF = 'all';
+function rxRowHtml(r){ return `<div class="rxr" onclick="openRx('${esc(r.id)}')"><div class="rm"><small>ห้อง</small>${esc(r.room||'-')}</div><div style="flex:1;min-width:0"><div class="nm">${esc(r.name)}</div><div class="mt">ยา ${r.n} ตัว</div></div>${r.low?`<span class="lowb">⚠️ ใกล้หมด ${r.low}</span>`:''}<span class="chev">›</span></div>`; }
+function rxFilter(){ const q = rxQ.trim().toLowerCase(); return RXR.filter(r=>(!q || (r.name+' '+r.room).toLowerCase().includes(q)) && (rxF!=='low' || r.low)); }
 function renderRxList(){
-  const items = rxFilter();
-  const rows = items.map(r=>`<div class="rxr" onclick="openRx('${esc(r.id)}')"><div style="flex:1"><div class="nm">${esc(r.name)}</div><div class="mt">ห้อง ${esc(r.room||'-')} · ยา ${r.n} ตัว</div>${r.low?`<span class="pill warn">⚠️ ยาใกล้หมด ${r.low} ตัว</span>`:''}</div><span style="font-size:22px;color:#98a2b3">›</span></div>`).join('');
+  const nLow = RXR.filter(r=>r.low).length;
   $('app').innerHTML = head('รับยาจากญาติ', BTH() + ' · เติมยาเดิม') + modeBar() + errBox() +
-    `<div class="rxs"><input id="rxq" type="search" placeholder="🔎 พิมพ์ชื่อหรือห้อง" value="${esc(rxQ)}" oninput="rxQ=this.value;rxRows()"></div><div id="rxrows">${rows || '<p class="meta" style="text-align:center">ไม่พบคนไข้</p>'}</div><div style="height:90px"></div>` +
+    `<div class="rxs"><input id="rxq" type="search" placeholder="🔎 พิมพ์ชื่อหรือเลขห้อง" value="${esc(rxQ)}" oninput="rxQ=this.value;rxRows()"></div>
+     <div class="rxf"><button class="${rxF==='all'?'on':''}" onclick="rxF='all';renderRxList()">ทั้งหมด ${RXR.length}</button><button class="${rxF==='low'?'on warn':''}" onclick="rxF='low';renderRxList()">⚠️ มียาใกล้หมด ${nLow}</button></div>
+     <p class="meta" style="margin:8px 16px 0">แตะชื่อคนไข้ที่ญาตินำยามาให้</p><div id="rxrows"></div><div style="height:90px"></div>` +
     `<div class="bottom"><button class="btn ghost" style="width:100%" onclick="rxLoad()">↻ โหลดใหม่</button></div>`;
+  rxRows();
 }
-function rxRows(){ const el = $('rxrows'); if (!el) return; const items = rxFilter(); el.innerHTML = items.map(r=>`<div class="rxr" onclick="openRx('${esc(r.id)}')"><div style="flex:1"><div class="nm">${esc(r.name)}</div><div class="mt">ห้อง ${esc(r.room||'-')} · ยา ${r.n} ตัว</div>${r.low?`<span class="pill warn">⚠️ ยาใกล้หมด ${r.low} ตัว</span>`:''}</div><span style="font-size:22px;color:#98a2b3">›</span></div>`).join('') || '<p class="meta" style="text-align:center">ไม่พบคนไข้</p>'; }
+function rxRows(){ const el = $('rxrows'); if (!el) return; el.innerHTML = rxFilter().map(rxRowHtml).join('') || '<p class="meta" style="text-align:center;padding:20px">ไม่พบคนไข้</p>'; }
 async function openRx(id){ loading(); try{ const r = await api('rxMeds',{residentId:id}); work = {rx:true, res:r.resident, meds:r.meds, qty:{}, exp:{}, dose:{}, photos:[], up:0, note:''}; lastErr=''; renderRx(); window.scrollTo(0,0); }catch(e){ lastErr = e.message; renderRxList(); } }
 function rxSet(id, v){ v = Math.max(0, Math.min(5000, Math.round(Number(v)||0))); if (v) work.qty[id] = v; else delete work.qty[id]; renderRx(); }
 function rxAdd(id, d){ rxSet(id, (work.qty[id]||0) + d); }
 function rxCount(){ return Object.keys(work.qty).length; }
+function rxBalBox(m){
+  if (m.bal===null) return `<div class="bal na"><b>–</b><small>ยังไม่มียอด</small></div>`;
+  if (m.bal < 0) return `<div class="bal bad"><small>ยอดติดลบ</small><b>${fmt(m.bal)}</b><small>นับยืนยันในแอป</small></div>`;
+  if (m.bal === 0) return `<div class="bal bad"><small>คงเหลือ</small><b>0</b><small>หมดแล้ว</small></div>`;
+  return `<div class="bal ${m.low?'warn':'ok'}"><small>คงเหลือ</small><b>${fmt(m.bal)}</b><small>${esc(m.unit)}${m.days!==null && m.daily>0?' · ~'+m.days+' วัน':''}</small></div>`;
+}
+function rxMedHtml(m){ const w = work, q = w.qty[m.id]||0;
+  const after = m.bal===null ? null : m.bal + q, days = after!==null && after>0 && m.daily>0 ? Math.floor(after/m.daily) : null;
+  return `<div class="rxm ${q?'on':m.low?'low':''}"><div class="rxh"><div style="flex:1;min-width:0"><div class="nm">${esc(m.name)}</div><div class="mt">${esc(m.dose||'')}${m.storage==='หัวเตียง'?' · <b>หัวเตียง</b>':''}</div></div>${rxBalBox(m)}</div>
+    <div class="rxq"><span class="lb">รับมา</span><button class="pm" onclick="rxAdd('${m.id}',-1)" aria-label="ลด">−</button><input type="number" inputmode="numeric" min="0" value="${q||''}" placeholder="0" onchange="rxSet('${m.id}',this.value)"><button class="pm" onclick="rxAdd('${m.id}',1)" aria-label="เพิ่ม">+</button><span class="un">${esc(m.unit)}</span></div>
+    <div class="rxc"><button onclick="rxAdd('${m.id}',10)">+10</button><button onclick="rxAdd('${m.id}',14)">+14</button><button onclick="rxAdd('${m.id}',30)">+30</button>${q?`<button class="clr" onclick="rxSet('${m.id}',0)">ล้าง</button>`:''}</div>
+    ${q?`<div class="rxa">${after!==null?`ยอดใหม่ ${fmt(m.bal)} → <b>${fmt(after)} ${esc(m.unit)}</b>${days!==null?` · พอใช้ ~${days} วัน`:''}`:`รับ <b>${fmt(q)} ${esc(m.unit)}</b>`}${m.bal!==null&&m.bal<0?'<br><small>ยอดเดิมติดลบ ควรนับยืนยันในแอป</small>':''}</div>
+    <div class="rxx"><label>หมดอายุ <input type="month" value="${esc(w.exp[m.id]||'')}" onchange="work.exp['${m.id}']=this.value"></label><label><input type="checkbox" ${w.dose[m.id]?'checked':''} onchange="work.dose['${m.id}']=this.checked"> หมอเปลี่ยนขนาดยา</label></div>`:''}
+  </div>`; }
 function renderRx(){
-  const w = work, n = rxCount(), up = w.up > 0, ok = n && w.photos.filter(p=>p.file).length && !up;
-  const meds = w.meds.map(m=>{ const q = w.qty[m.id]||0;
-    const bal = m.bal===null ? '' : m.bal < 0 ? `ยอดในระบบติดลบ ${fmt(-m.bal)} (ควรนับยืนยันในแอป)` : m.bal === 0 ? 'หมดแล้ว' : `เหลือ ${fmt(m.bal)} ${esc(m.unit)}${m.days!==null && m.daily>0 ? ' · ~'+m.days+' วัน' : ''}`;
-    return `<div class="rxm ${q?'on':m.low?'low':''}"><div class="nm">${esc(m.name)}</div><div class="mt">${esc(m.dose||'')}${m.storage==='หัวเตียง'?' · หัวเตียง':''}</div>
-      ${bal?`<span class="pill ${m.low?'warn':'ok'}">${m.low?'⚠️ ':''}${bal}</span>`:''}
-      <div class="rxq"><input type="number" inputmode="numeric" min="0" value="${q||''}" placeholder="0" onchange="rxSet('${m.id}',this.value)"><span style="color:var(--muted)">${esc(m.unit)}</span>
-        <button onclick="rxAdd('${m.id}',10)">+10</button><button onclick="rxAdd('${m.id}',30)">+30</button>${q?`<button onclick="rxSet('${m.id}',0)" aria-label="ล้าง">✕</button>`:''}</div>
-      ${q?`<div class="rxx">หมดอายุ <input type="month" value="${esc(w.exp[m.id]||'')}" onchange="work.exp['${m.id}']=this.value"> <label><input type="checkbox" ${w.dose[m.id]?'checked':''} onchange="work.dose['${m.id}']=this.checked"> หมอเปลี่ยนขนาดยา</label>${q&&m.bal!==null?`<span style="color:var(--ok);font-weight:700">→ รวม ${fmt(m.bal+q)}</span>`:''}</div>`:''}
-    </div>`; }).join('');
+  const w = work, n = rxCount(), up = w.up > 0, nPh = w.photos.filter(p=>p.file).length, ok = n && nPh && !up;
+  const low = w.meds.filter(m=>m.low), rest = w.meds.filter(m=>!m.low);
   const ph = w.photos.map((p,i)=>`<div class="ph" style="background-image:url(${p.thumb})">${p.file?'':`<b>${p.err?'⚠️ ลองใหม่':'กำลังส่ง…'}</b>`}</div>`).join('');
+  const cam = (cls, txt) => `<label class="${cls}">${txt}<input type="file" accept="image/*" capture="environment" style="display:none" onchange="rxPhoto(this)"></label>`;
+  const st = (on, i, t) => `<div class="${on?'done':''}"><i>${on?'✓':i}</i>${t}</div>`;
+  const btn = !n ? `<button class="btn main" disabled>ใส่จำนวนยาที่ญาตินำมาก่อน</button>`
+    : !nPh && !up ? cam('btn main cam', '📷 ถ่ายรูปยาที่รับ')
+    : `<button class="btn main" ${ok?'':'disabled'} onclick="rxSave()">${up?'กำลังส่งรูป…':'✅ บันทึกรับยา '+n+' รายการ'}</button>`;
   $('app').innerHTML = head(esc(w.res.name), `ห้อง ${esc(w.res.room||'-')} · ผู้รับ ${esc(ME||'')}`, true) + errBox() +
-    `<p class="meta" style="margin:10px 14px 0">ใส่จำนวนเฉพาะยาที่ญาตินำมา · ยาที่ใกล้หมดอยู่บนสุด</p>${meds || '<div class="sec">คนไข้นี้ยังไม่มียาในรายการ</div>'}
-    <div class="sec"><h2 style="margin:0 0 8px">📷 รูปยาที่รับ</h2><div class="rxp">${ph}<label><span>📷</span>ถ่ายรูป<input type="file" accept="image/*" capture="environment" style="display:none" onchange="rxPhoto(this)"></label></div>
+    `<div class="rxst">${st(n,1,'ใส่จำนวน')}${st(nPh,2,'ถ่ายรูป')}${st(false,3,'บันทึก')}</div>
+    <p class="meta" style="margin:8px 16px 0">ใส่จำนวนเฉพาะยาที่ญาตินำมา ตัวอื่นเว้นว่างไว้</p>
+    ${low.length?`<div class="rxg warn">⚠️ ใกล้หมด / หมดแล้ว (${low.length})</div>${low.map(rxMedHtml).join('')}`:''}
+    ${rest.length?`<div class="rxg">${low.length?'ยาอื่น ๆ':'รายการยา'} (${rest.length})</div>${rest.map(rxMedHtml).join('')}`:''}
+    ${w.meds.length?'':'<div class="sec">คนไข้นี้ยังไม่มียาในรายการ</div>'}
+    <div class="sec"><h2 style="margin:0 0 8px">📷 รูปยาที่รับ ${nPh?`(${nPh})`:''}</h2><div class="rxp">${ph}${cam('', '<span>📷</span>ถ่ายรูป')}</div>
       <p class="meta" style="margin:8px 0">ถ่ายได้หลายรูป ให้เห็นฉลากยา</p><input class="rxn" placeholder="หมายเหตุ เช่น ญาติที่นำยามา" value="${esc(w.note)}" oninput="work.note=this.value"></div>
-    <div class="sec" style="background:#eef5fc;border-color:#cfe0f3;font-size:14px">ℹ️ ยาตัวใหม่ที่ยังไม่มีในรายการ หรือหมอเปลี่ยนมื้อ/ขนาด ให้เพิ่ม/แก้ในแอประบบยา</div><div style="height:100px"></div>
-    <div class="bottom"><div class="hint">${n?`รับยา ${n} รายการ`:'ยังไม่ได้ใส่จำนวน'} · ${w.photos.filter(p=>p.file).length?`รูป ${w.photos.filter(p=>p.file).length} รูป`:'ยังไม่ถ่ายรูป'}${up?' · กำลังส่งรูป…':''}</div><button class="btn main" ${ok?'':'disabled'} onclick="rxSave()">✅ บันทึกรับยา${n?' '+n+' รายการ':''}</button></div>`;
+    <div class="sec" style="background:#eef5fc;border-color:#cfe0f3;font-size:14px">ℹ️ ยาตัวใหม่ที่ยังไม่มีในรายการ หรือหมอเปลี่ยนมื้อ/ขนาด ให้เพิ่ม/แก้ในแอประบบยา</div><div style="height:110px"></div>
+    <div class="bottom"><div class="hint">${n?`ใส่จำนวนแล้ว ${n} รายการ`:'ยังไม่ได้ใส่จำนวน'} · ${nPh?`รูป ${nPh} รูป`:'ยังไม่ถ่ายรูป'}</div>${btn}</div>`;
 }
 function rxPhoto(inp){
   const f = inp.files && inp.files[0]; if (!f) return; const w = work;
