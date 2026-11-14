@@ -18,6 +18,7 @@ header .sub{font-size:13px;opacity:.85;font-weight:400}
 .me{background:rgba(255,255,255,.18);border-radius:20px;padding:3px 10px;font-size:13px;white-space:nowrap}
 .back{background:none;border:0;color:#fff;font-size:26px;padding:0 4px 0 0;cursor:pointer;line-height:1}
 .tabs{display:flex;gap:6px;padding:10px 12px 0}
+.brbar{margin:10px 12px 0;padding:10px 12px;border-radius:10px;background:#fff7e6;border:1.5px solid #f0c36d;font-size:15px;cursor:pointer;display:flex;gap:6px;align-items:center}.brbar span{margin-left:auto;color:var(--pri);font-weight:600;font-size:13px}
 .modebar{display:flex;gap:6px;padding:10px 12px 0}.modebar button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:9px 4px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}.modebar button.on{border-color:var(--pri);background:var(--pri);color:#fff}
 .tab{flex:1;background:#fff;border-radius:10px;padding:9px 4px;font:inherit;font-size:14px;color:var(--muted);cursor:pointer;border:1px solid var(--line)}
 .tab.on{background:var(--pri);color:#fff;border-color:var(--pri);font-weight:600}
@@ -102,8 +103,9 @@ async function api(action, data){
 }
 function loading(t){ $('app').innerHTML = `<div class="center"><div class="spin"></div>${t||'กำลังโหลด…'}</div>`; }
 function head(title, sub, back){ return `<header>${back?'<button class="back" onclick="goList()" aria-label="กลับ">‹</button>':''}<h1>${title}<div class="sub">${sub||''}</div></h1>${ME?`<span class="me" ${RECV?'onclick="pickNA()" style="cursor:pointer"':''}>👤 ${esc(ME)}${RECV?' ▾':''}</span>`:''}</header>`; }
-function modeBar(){ if (WEB || RECV) return ''; return `<div class="modebar"><button class="${PREP?'on':''}" onclick="setMode(true)">📦 จัดยาใส่ถ้วย</button><button class="${PREP?'':'on'}" onclick="setMode(false)">🔍 ตรวจนับ</button></div>`; }
+function modeBar(){ if (WEB || RECV) return ''; return `<div class="brbar" onclick="changeBranch()">📍 สาขา <b>${esc(BTH())}</b> <span>เปลี่ยนสาขา ▾</span></div><div class="modebar"><button class="${PREP?'on':''}" onclick="setMode(true)">📦 จัดยาใส่ถ้วย</button><button class="${PREP?'':'on'}" onclick="setMode(false)">🔍 ตรวจนับ</button></div>`; }
 function pickMode(){ $('app').innerHTML = head('ระบบถ้วยยา', BTH() + ' · วันนี้') + `<div class="sec"><h2>วันนี้จะทำอะไร</h2><button class="btn main" style="margin-bottom:10px" onclick="PREP=false;setMode(true)">📦 จัดยาใส่ถ้วย</button><button class="btn main" onclick="PREP=true;setMode(false)">🔍 ตรวจนับถ้วยยา</button><p class="meta">สลับได้ตลอดจากปุ่มด้านบนของรายชื่อ</p></div>`; }
+async function changeBranch(){ if (busy) return; const nb = await pickBranch(); BRANCH = nb; lsSet('uwc_branch', nb); cups = []; lastErr = ''; view = {screen:'list', tab: PREP?'รอจัด':'รอตรวจ'}; loadList(); }
 function setMode(p){ if (p===PREP || busy) return; PREP = p; cups = []; lastErr = ''; view = {screen:'list', tab: PREP?'รอจัด':'รอตรวจ'}; document.title = PREP ? 'จัดยาใส่ถ้วย · U Well Care' : 'ตรวจนับถ้วยยา · U Well Care'; loadList(); }
 function errBox(){ return lastErr ? `<div class="err">⚠️ ${esc(lastErr)}</div>` : ''; }
 
