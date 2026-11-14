@@ -210,19 +210,28 @@ function photoState(){
   if (work.upErr) return '<div class="meta" style="margin-top:6px;color:var(--bad)">อัปโหลดรูปไม่สำเร็จ จะลองใหม่ตอนกดตรวจนับเสร็จ</div>';
   return '<div class="meta" style="margin-top:6px">กำลังบันทึกรูป… นับยาต่อได้เลย</div>';
 }
+function isSolo(c){ const me = WEB ? WEB.by : ME; return !!c.prepBy && !!me && String(c.prepBy).trim() === String(me).trim(); }
 function askSubmit(){
+  const c = cups.find(x=>x.id===view.cupId);
+  if (isSolo(c)) return askSolo();
   openModal(`<h3>ยืนยันตรวจนับเสร็จ?</h3><p>หลังยืนยันจะแก้ตัวเลขไม่ได้ ระบบจะเทียบกับที่ RN คนที่ 1 จัดทันที</p>
    <div class="acts"><button class="btn ghost" onclick="closeModal()">กลับไปนับ</button><button class="btn main" style="width:auto" onclick="closeModal();doSubmit()">ยืนยัน</button></div>`);
+}
+function askSolo(){
+  openModal(`<h3>⚠️ คุณเป็นคนจัดถ้วยนี้เอง</h3><p>ปกติต้องให้พยาบาลอีกคนตรวจนับ ถ้าตอนนี้ทำงานคนเดียว กดยืนยันได้ ระบบจะติดป้าย <b>"ตรวจคนเดียว"</b> ไว้ที่ถ้วยนี้ ให้ NA และหัวหน้าเห็น</p>
+   <p class="meta">นับใหม่อีกรอบให้ละเอียดก่อนยืนยัน</p>
+   <div class="acts"><button class="btn ghost" onclick="closeModal()">กลับไปนับ</button><button class="btn main" style="width:auto;background:var(--warn)" onclick="closeModal();work.solo=true;doSubmit()">ยืนยัน ตรวจคนเดียว</button></div>`);
 }
 async function doSubmit(){
   const c = cups.find(x=>x.id===view.cupId); busy = true; loading(work.file ? 'กำลังบันทึกผล…' : 'กำลังบันทึกผลและรูป…');
   try{
     let file = work.file;
     if (!file && work.up){ try{ file = await work.up; }catch(e){ file = null; } }
-    const r = await api('submit', file ? {cupId:c.id, counts:work.counts, photoFile:file} : {cupId:c.id, counts:work.counts, photo:work.photo}); lastErr=''; busy=false;
+    const base = {cupId:c.id, counts:work.counts, solo:!!work.solo};
+    const r = await api('submit', file ? Object.assign(base,{photoFile:file}) : Object.assign(base,{photo:work.photo})); lastErr=''; busy=false;
     view = {screen:'result', cupId:c.id, tab:'รอตรวจ', r};
     renderResult(c, r); notifyChat(c, r);
-  }catch(e){ busy=false; lastErr = e.message; renderCheck(true); }
+  }catch(e){ busy=false; if (String(e.message).startsWith('SAME_PERSON')){ lastErr=''; renderCheck(true); return askSolo(); } lastErr = e.message; renderCheck(true); }
 }
 function renderResult(c, r){
   const rows = r.items.map(i=>`<tr class="${i.ok?'':'x'}"><td>${esc(i.n)}</td><td class="n">${fmt(i.prep)}</td><td class="n">${fmt(i.count)}${i.ok?'':' ❌'}</td></tr>`).join('');
@@ -230,7 +239,7 @@ function renderResult(c, r){
    (r.match ? `<div class="res ok"><div class="big">✅</div><h2>นับตรงทุกตัวยา</h2><p>${fmt(r.total)} เม็ด · ส่งต่อให้ NA ได้</p></div>`
             : `<div class="res bad"><div class="big">❌</div><h2>นับไม่ตรง ${r.bad} ตัวยา</h2><p>RN จัด ${fmt(r.prepTotal)} เม็ด · คุณนับได้ ${fmt(r.total)} เม็ด</p><p><b>ห้ามส่งถ้วยนี้ให้ NA</b> ถ้วยถูกส่งกลับไปขั้นจัดยาแล้ว</p></div>`) +
    `<div class="sec"><h2>เทียบรายตัวยา</h2><table><tr><th>ยา</th><th style="text-align:center">RN จัด</th><th style="text-align:center">คุณนับ</th></tr>${rows}</table></div>
-    <div class="note" id="chatnote"></div>
+    ${work && work.solo ? '<div class="note" style="color:var(--warn)">⚠️ บันทึกเป็น "ตรวจคนเดียว" แล้ว</div>' : ''}<div class="note" id="chatnote"></div>
     <div class="bottom"><button class="btn main" style="background:var(--pri)" onclick="goList()">กลับหน้ารายการ</button></div>`;
 }
 async function notifyChat(c, r){
@@ -323,7 +332,8 @@ function renderRecvList(){
   items.forEach(c=>{
     if (c.round!==lastRound){ body += `<div class="round">มื้อ${esc(c.round)}</div>`; lastRound = c.round; }
     const can = c.status==='ตรวจแล้ว';
-    const tag = c.status==='รับแล้ว' ? `<span class="pill ok">✅ รับโดย ${esc(c.receiveBy)}${c.receiveAt?' '+esc(c.receiveAt)+' น.':''}</span>` : '';
+    const solo = c.solo ? `<span class="pill" style="background:var(--warn-bg);color:var(--warn)">⚠️ พยาบาลตรวจคนเดียว</span> ` : '';
+    const tag = solo + (c.status==='รับแล้ว' ? `<span class="pill ok">✅ รับโดย ${esc(c.receiveBy)}${c.receiveAt?' '+esc(c.receiveAt)+' น.':''}</span>` : '');
     body += `<div class="cup ${can?'tap':''}" ${can?`onclick="openRecv('${esc(c.id)}')"`:''}><div class="info">
       <div class="nm">${esc(c.name)}</div><div class="meta">ห้อง ${esc(c.room)} · ${esc(c.timing)} · ${c.drugs.length} ตัวยา · ${fmt(c.drugs.reduce((a,d)=>a+d.q,0))} เม็ด</div>${tag}</div>
       ${can?'<span class="chev">›</span>':''}</div>`;
@@ -342,6 +352,7 @@ function renderRecv(top){
   const hint = [left?`ยังไม่ได้ติ๊ก ${left} ตัวยา`:'', !work.photo?'ยังไม่ถ่ายรูป':''].filter(Boolean).join(' · ');
   $('app').innerHTML = head(esc(c.name), `ห้อง ${esc(c.room)} · ${esc(c.round)} ${esc(c.timing)}`, true) + errBox() +
    `<div class="sec"><h2>ดูยาในถ้วยว่าตรงกับรายการ แล้วแตะติ๊กทีละตัว</h2>${drugs}
+     ${c.solo?'<div class="err" style="margin:10px 0 0">⚠️ ถ้วยนี้พยาบาลจัดและตรวจคนเดียว ดูยาให้ละเอียดเป็นพิเศษ</div>':''}
      <div class="meta" style="margin-top:8px">รวม ${fmt(c.drugs.reduce((a,d)=>a+d.q,0))} เม็ด · พยาบาลตรวจแล้ว${c.checkBy?' ('+esc(String(c.checkBy).split('@')[0])+')':''}</div></div>
     <div class="sec"><h2>รูปถ้วยตอนรับ</h2>${work.photo?`<img class="photo" src="${work.photo}" alt="รูปถ้วย">`:''}
      <label class="btn sec2">📷 ${work.photo?'ถ่ายใหม่':'ถ่ายรูป'}<input type="file" accept="image/*" capture="environment" style="display:none" onchange="gotPhoto(this)"></label>${photoState()}</div>
