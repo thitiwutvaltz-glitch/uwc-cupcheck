@@ -83,7 +83,10 @@ tr.x td{background:var(--bad-bg)}
 <script src="config.js?v=3"></script>
 <script>
 const C = window.CUPCHECK_CONFIG || {};
-const QS = new URLSearchParams(location.search); const PREP = QS.get('m')==='prep'; const RECV = QS.get('m')==='receive'; if (PREP) document.title = 'จัดยาใส่ถ้วย · U Well Care'; if (RECV) document.title = 'กระดานรับถ้วยยา · U Well Care'; const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
+const QS = new URLSearchParams(location.search); const BR_TH = {Srinakarin:'ศรีนครินทร์', Victory:'อนุสาวรีย์', Rama3:'พระราม 3'};
+let BRANCH = BR_TH[QS.get('b')] ? QS.get('b') : null;
+const BTH = () => BR_TH[BRANCH] || BR_TH.Srinakarin;
+const PREP = QS.get('m')==='prep'; const RECV = QS.get('m')==='receive'; if (PREP) document.title = 'จัดยาใส่ถ้วย · U Well Care'; if (RECV) document.title = 'กระดานรับถ้วยยา · U Well Care'; const WEB = QS.get('k') ? {key:QS.get('k'), by:QS.get('by')||'', cup:QS.get('cup')||''} : null;
 let ME = null, NA = null, STAFF = [], cups = [], view = {screen:'list', tab:'รอตรวจ'}, work = null, busy = false, lastErr = '';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -91,7 +94,7 @@ const fmt = n => n === 0.5 ? '½' : (n % 1 === 0.5 ? Math.floor(n) + '½' : Stri
 
 async function api(action, data){
   const auth = WEB ? {key:WEB.key, by:WEB.by} : {idToken: liff.getIDToken()};
-  const r = await fetch(C.API_URL, {method:'POST', body: JSON.stringify(Object.assign({action}, auth, data||{}))});
+  const r = await fetch(C.API_URL, {method:'POST', body: JSON.stringify(Object.assign({action, branch: BRANCH || 'Srinakarin'}, auth, data||{}))});
   const j = await r.json();
   if (!j.ok) throw new Error(j.error || 'ระบบขัดข้อง');
   return j;
@@ -100,9 +103,15 @@ function loading(t){ $('app').innerHTML = `<div class="center"><div class="spin"
 function head(title, sub, back){ return `<header>${back?'<button class="back" onclick="goList()" aria-label="กลับ">‹</button>':''}<h1>${title}<div class="sub">${sub||''}</div></h1>${ME?`<span class="me" ${RECV?'onclick="pickNA()" style="cursor:pointer"':''}>👤 ${esc(ME)}${RECV?' ▾':''}</span>`:''}</header>`; }
 function errBox(){ return lastErr ? `<div class="err">⚠️ ${esc(lastErr)}</div>` : ''; }
 
+function pickBranch(){
+  return new Promise(res=>{ window.__brRes = res;
+    $('app').innerHTML = head('เลือกสาขา','ระบบถ้วยยา') + `<div class="sec"><h2>เครื่องนี้ใช้ที่สาขาไหน</h2><div class="names">${Object.keys(BR_TH).map(k=>`<button onclick="window.__brRes('${k}')">${BR_TH[k]}</button>`).join('')}</div><p class="meta">เครื่องจะจำไว้</p></div>`; });
+}
 async function start(){
   try{
-    if (WEB && RECV){ view = {screen:'list', tab:'ตรวจแล้ว'}; NA = lsGet('uwc_na'); ME = NA || 'เลือกชื่อ'; await loadList(); if (!NA) pickNA(); return; }
+    if (WEB && !BRANCH){ BRANCH = BR_TH[lsGet('uwc_branch')] ? lsGet('uwc_branch') : await pickBranch(); }
+    if (BRANCH) lsSet('uwc_branch', BRANCH);
+    if (WEB && RECV){ view = {screen:'list', tab:'ตรวจแล้ว'}; NA = lsGet('uwc_na_' + BRANCH); ME = NA || 'เลือกชื่อ'; await loadList(); if (!NA) pickNA(); return; }
     if (WEB && PREP){ ME = WEB.by ? WEB.by.split('@')[0] : 'เครื่องเวร'; view = {screen:'list', tab:'รอจัด'}; await loadList();
       if (WEB.cup){ const c=cups.find(x=>x.id===WEB.cup); if (c && ['รอจัด','ไม่ตรง'].includes(c.status)) openPrep(WEB.cup); else { lastErr = c ? 'ถ้วยนี้สถานะ "'+c.status+'" แล้ว' : 'ไม่พบถ้วยนี้ในวันนี้'; renderList(); } }
       return; }
@@ -116,21 +125,21 @@ async function start(){
     if (me.status === 'approved'){ ME = me.name; await loadList(); }
     else if (me.status === 'pending') showPending(me.name);
     else showRegister(me);
-  }catch(e){ $('app').innerHTML = head('ตรวจนับถ้วยยา','ศรีนครินทร์') + `<div class="err">⚠️ ${esc(e.message)}<br><small>${esc(String(e.stack||'').split('\n')[0])}</small></div><div class="sec"><button class="btn sec2" onclick="location.reload()">ลองใหม่</button></div>`; }
+  }catch(e){ $('app').innerHTML = head('ตรวจนับถ้วยยา',BTH()) + `<div class="err">⚠️ ${esc(e.message)}<br><small>${esc(String(e.stack||'').split('\n')[0])}</small></div><div class="sec"><button class="btn sec2" onclick="location.reload()">ลองใหม่</button></div>`; }
 }
 
 /* ---------- ลงทะเบียน ---------- */
 let regSel = null, regData = null;
 function showRegister(me){
   regData = me || regData;
-  $('app').innerHTML = head('ลงทะเบียนครั้งแรก','ตรวจนับถ้วยยา · ศรีนครินทร์') + errBox() +
+  $('app').innerHTML = head('ลงทะเบียนครั้งแรก','ตรวจนับถ้วยยา · ' + BTH()) + errBox() +
   `<div class="sec"><h2>บัญชี LINE: ${esc(regData.lineName)}</h2><p style="margin:0 0 12px">เลือกชื่อของคุณ ทำครั้งเดียว แอดมินอนุมัติแล้วใช้งานได้เลย ไม่ต้องใส่รหัส</p>
   <div class="names">${regData.nurses.map(n=>`<button class="${regSel===n.id?'on':''}" onclick="regSel='${esc(n.id)}';showRegister()">${esc(n.name)}</button>`).join('')}</div>
   <button class="btn main" style="margin-top:14px" ${regSel?'':'disabled'} onclick="doRegister()">ส่งคำขอลงทะเบียน</button></div>`;
 }
 async function doRegister(){ try{ loading('กำลังส่ง…'); const r = await api('register',{staffId:regSel}); lastErr=''; showPending(r.name); }catch(e){ lastErr=e.message; showRegister(); } }
 function showPending(name){
-  $('app').innerHTML = head('รอแอดมินอนุมัติ','ตรวจนับถ้วยยา · ศรีนครินทร์') +
+  $('app').innerHTML = head('รอแอดมินอนุมัติ','ตรวจนับถ้วยยา · ' + BTH()) +
   `<div class="sec"><div class="center" style="padding:16px 0"><div style="font-size:40px">⏳</div><p>ส่งคำขอในชื่อ <b>${esc(name)}</b> แล้ว<br>เมื่อแอดมินอนุมัติ กดปุ่มด้านล่างเพื่อเข้าใช้งาน</p></div>
   <button class="btn sec2" onclick="loading();start()">ตรวจสถานะอีกครั้ง</button></div>`;
 }
@@ -150,7 +159,7 @@ function renderList(){ if (PREP) return renderPrepList(); if (RECV) return rende
       ${c.status==='รอตรวจ'?'<span class="chev">›</span>':''}</div>`;
   });
   if (!items.length) body = `<div class="empty">${view.tab==='รอตรวจ'?'ไม่มีถ้วยรอตรวจตอนนี้':'ไม่มีรายการ'}</div>`;
-  $('app').innerHTML = head('ตรวจนับถ้วยยา','ศรีนครินทร์ · วันนี้') + errBox() +
+  $('app').innerHTML = head('ตรวจนับถ้วยยา',BTH() + ' · วันนี้') + errBox() +
    `<div class="tabs">${['รอตรวจ','ไม่ตรง','ตรวจแล้ว'].map(t=>`<button class="tab ${view.tab===t?'on':''}" onclick="view.tab='${t}';renderList()">${t==='ไม่ตรง'?'ส่งกลับ':t} (${n(t)})</button>`).join('')}</div>
    <div class="list">${body}</div><div class="bottom"><button class="btn ghost" style="width:100%" onclick="loadList()">↻ โหลดใหม่</button></div>`;
 }
@@ -251,7 +260,7 @@ function renderPrepList(){
       ${can(c.status)?'<span class="chev">›</span>':''}</div>`;
   });
   if (!items.length) body = `<div class="empty">ไม่มีรายการ</div>`;
-  $('app').innerHTML = head('จัดยาใส่ถ้วย','ศรีนครินทร์ · วันนี้') + errBox() +
+  $('app').innerHTML = head('จัดยาใส่ถ้วย',BTH() + ' · วันนี้') + errBox() +
    `<div class="tabs">${['รอจัด','ไม่ตรง','รอตรวจ'].map(t=>`<button class="tab ${view.tab===t?'on':''}" onclick="view.tab='${t}';renderList()">${t==='ไม่ตรง'?'ถูกส่งกลับ':t==='รอตรวจ'?'ส่งตรวจแล้ว':t} (${n(t)})</button>`).join('')}</div>
    <div class="list">${body}</div><div class="bottom"><button class="btn ghost" style="width:100%" onclick="loadList()">↻ โหลดใหม่</button></div>`;
 }
@@ -306,7 +315,7 @@ function pickNA(){
     <div style="max-height:55vh;overflow:auto"><div class="names">${btns(na)}</div>${other.length?`<div class="round" style="margin:12px 2px 6px">ตำแหน่งอื่น</div><div class="names">${btns(other)}</div>`:''}</div>
     ${NA?'<div class="acts"><button class="btn ghost" onclick="closeModal()">ปิด</button></div>':''}`);
 }
-function setNA(n){ NA = n; ME = n; lsSet('uwc_na', n); closeModal(); if (view.screen==='recv') renderRecv(); else renderList(); }
+function setNA(n){ NA = n; ME = n; lsSet('uwc_na_' + BRANCH, n); closeModal(); if (view.screen==='recv') renderRecv(); else renderList(); }
 function renderRecvList(){
   const n = s => cups.filter(c=>c.status===s).length;
   const items = cups.filter(c=>c.status===view.tab);
@@ -320,7 +329,7 @@ function renderRecvList(){
       ${can?'<span class="chev">›</span>':''}</div>`;
   });
   if (!items.length) body = `<div class="empty">${view.tab==='ตรวจแล้ว'?'ยังไม่มีถ้วยที่พยาบาลตรวจเสร็จ':'ไม่มีรายการ'}</div>`;
-  $('app').innerHTML = head('กระดานรับถ้วยยา','ศรีนครินทร์ · วันนี้') + errBox() +
+  $('app').innerHTML = head('กระดานรับถ้วยยา',BTH() + ' · วันนี้') + errBox() +
    `<div class="tabs">${['ตรวจแล้ว','รับแล้ว'].map(t=>`<button class="tab ${view.tab===t?'on':''}" onclick="view.tab='${t}';renderList()">${t==='ตรวจแล้ว'?'รอรับ':t} (${n(t)})</button>`).join('')}</div>
    <div class="list">${body}</div><div class="bottom"><button class="btn ghost" style="width:100%" onclick="loadList()">↻ โหลดใหม่</button></div>`;
 }
