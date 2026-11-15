@@ -255,7 +255,12 @@ function showPending(name){
 }
 
 /* ---------- รายการถ้วย ---------- */
-async function loadList(){ if (RX) return rxLoad(); loading(); try{ const r = await api('list', PREP?{mode:'prep'}:RECV?{mode:'receive'}:{}); if (r.staff) STAFF = r.staff; cups = r.cups; lastErr=''; }catch(e){ lastErr = e.message; } renderList(); }
+async function loadList(){ if (RX) return rxLoad(); loading(); try{ const r = await api('list', PREP?{mode:'prep'}:RECV?{mode:'receive'}:{}); if (r.staff) STAFF = r.staff; cups = r.cups; lastErr=''; }catch(e){ lastErr = e.message; } renderList();  if (PREP) cupSync(); }
+// ยาที่เพิ่มในแอประบบยาระหว่างวัน: สั่งเติมเข้าถ้วยที่ยังไม่จัดเบื้องหลัง แล้วโหลดรายชื่อใหม่ถ้ามีการเปลี่ยน
+let syncAt = 0, syncing = false;
+async function cupSync(){ if (syncing || Date.now()-syncAt < 45000) return; syncing = true; syncAt = Date.now();
+  try{ const r = await api('cupSync'); if ((r.cups||r.filled) && PREP && view.screen==='list'){ const l = await api('list',{mode:'prep'}); if (PREP && view.screen==='list'){ cups = l.cups; renderList(); } } }catch(e){}
+  syncing = false; }
 function goList(){ if (RX){ work = null; if (RXR.length){ lastErr=''; renderRxList(); window.scrollTo(0,0); } else rxLoad(); return; } view = {screen:'list', tab:view.tab||(PREP?'รอจัด':RECV?'ตรวจแล้ว':'รอตรวจ')}; if ((PREP||RECV) && cups.length){ lastErr=''; renderList(); window.scrollTo(0,0); } else loadList(); }
 function renderList(){ if (RX) return renderRxList(); if (PREP) return renderPrepList(); if (RECV) return renderRecvList();
   const n = s => cups.filter(c=>c.status===s).length;
