@@ -145,7 +145,7 @@ function renderRxList(){
   rxRows();
 }
 function rxRows(){ const el = $('rxrows'); if (!el) return; el.innerHTML = rxFilter().map(rxRowHtml).join('') || '<p class="meta" style="text-align:center;padding:20px">ไม่พบคนไข้</p>'; }
-async function openRx(id){ loading(); try{ const r = await api('rxMeds',{residentId:id}); work = {rx:true, res:r.resident, meds:r.meds, qty:{}, exp:{}, dose:{}, photos:[], up:0, note:''}; lastErr=''; renderRx(); window.scrollTo(0,0); }catch(e){ lastErr = e.message; renderRxList(); } }
+async function openRx(id){ loading(); try{ const r = await api('rxMeds',{residentId:id}); work = {rx:true, res:r.resident, meds:r.meds, qty:{}, exp:{}, dose:{}, photos:[], up:0, note:'', recent:null}; lastErr=''; renderRx(); window.scrollTo(0,0); rxLoadRecent(); }catch(e){ lastErr = e.message; renderRxList(); } }
 function rxSet(id, v){ v = Math.max(0, Math.min(5000, Math.round(Number(v)||0))); if (v) work.qty[id] = v; else delete work.qty[id]; renderRx(); }
 function rxAdd(id, d){ rxSet(id, (work.qty[id]||0) + d); }
 function rxCount(){ return Object.keys(work.qty).length; }
@@ -180,7 +180,7 @@ function renderRx(){
     ${w.meds.length?'':'<div class="sec">คนไข้นี้ยังไม่มียาในรายการ</div>'}
     <div class="sec"><h2 style="margin:0 0 8px">📷 รูปยาที่รับ ${nPh?`(${nPh})`:''}</h2><div class="rxp">${ph}${cam('', '<span>📷</span>ถ่ายรูป')}</div>
       <p class="meta" style="margin:8px 0">ถ่ายได้หลายรูป ให้เห็นฉลากยา</p><input class="rxn" placeholder="หมายเหตุ เช่น ญาติที่นำยามา" value="${esc(w.note)}" oninput="work.note=this.value"></div>
-    <div class="sec" style="background:#eef5fc;border-color:#cfe0f3;font-size:14px">ℹ️ ยาตัวใหม่ที่ยังไม่มีในรายการ หรือหมอเปลี่ยนมื้อ/ขนาด ให้เพิ่ม/แก้ในแอประบบยา</div><div style="height:110px"></div>
+    <div class="sec" style="background:#eef5fc;border-color:#cfe0f3;font-size:14px">ℹ️ ยาตัวใหม่ที่ยังไม่มีในรายการ หรือหมอเปลี่ยนมื้อ/ขนาด ให้เพิ่ม/แก้ในแอประบบยา</div>${rxRecentHtml()}<div style="height:110px"></div>
     <div class="bottom"><div class="hint">${n?`ใส่จำนวนแล้ว ${n} รายการ`:'ยังไม่ได้ใส่จำนวน'} · ${nPh?`รูป ${nPh} รูป`:'ยังไม่ถ่ายรูป'}</div>${btn}</div>`;
 }
 function rxPhoto(inp){
@@ -197,6 +197,18 @@ async function rxUp(p){ const w = work; w.up++; p.err = false;
     const r = await api('rxPhoto',{photo:p.data, kind}); p.file = r.file; p.data = null; }
   catch(e){ p.err = true; lastErr = 'ส่งรูปไม่สำเร็จ แตะถ่ายรูปใหม่อีกครั้ง'; w.photos = w.photos.filter(x=>x!==p); }
   w.up--; if (work===w) renderRx(); }
+/* ---------- ยกเลิกรายการรับยาที่บันทึกผิด ---------- */
+async function rxLoadRecent(){ const w = work; try{ const r = await api('rxRecent',{residentId:w.res.id}); w.recent = r.items; }catch(e){ w.recent = []; w.recentErr = e.message; } if (work===w && !busy) renderRx(); }
+function rxRecentHtml(){ const w = work; if (!w || !w.rx) return '';
+  const body = w.recent===null ? '<p class="meta">กำลังโหลด…</p>' : !w.recent.length ? '<p class="meta">ไม่มีรายการรับยาใน 14 วัน</p>'
+    : w.recent.map(t=>`<div class="drug" style="display:flex;gap:8px;align-items:center${t.cancelled?';opacity:.5':''}"><div style="flex:1"><b>${esc(t.name)}</b><div class="meta">${esc(t.at)} · รับ ${fmt(t.qty)} · ${esc(t.by)}</div></div>${t.cancelled?'<span class="pill bad">ยกเลิกแล้ว</span>':`<button class="btn ghost" style="font-size:14px;padding:8px 10px" onclick="rxAskCancel('${esc(t.id)}')">ยกเลิก</button>`}</div>`).join('');
+  return `<div class="sec"><h2 style="margin:0 0 4px">🕘 รับยาล่าสุด (14 วัน)</h2><p class="meta" style="margin:0 0 6px">บันทึกผิด กด "ยกเลิก" แล้วรับใหม่ให้ถูก · ยอดในแอปอัปเดตภายใน 15 นาที</p>${body}</div>`; }
+function rxAskCancel(id){ const t = (work.recent||[]).find(x=>x.id===id); if (!t) return;
+  openModal(`<h3>ยกเลิกรายการรับยานี้?</h3><p><b>${esc(t.name)}</b><br>${esc(t.at)} · รับ ${fmt(t.qty)} · ${esc(t.by)}</p><input id="rxreason" class="rxn" placeholder="เหตุผล เช่น ใส่จำนวนผิด / เลือกคนไข้ผิด"><div class="err" id="rxcerr" style="display:none;margin:8px 0 0"></div><div class="acts"><button class="btn ghost" onclick="closeModal()">ไม่ยกเลิก</button><button class="btn main" style="width:auto;background:var(--bad)" onclick="rxDoCancel('${esc(id)}')">ยืนยันยกเลิก</button></div>`); }
+async function rxDoCancel(id){ const reason = ($('rxreason').value||'').trim(); const er = $('rxcerr');
+  if (!reason){ er.textContent = 'กรุณาใส่เหตุผล'; er.style.display='block'; return; }
+  try{ await api('rxCancel',{txnId:id, reason}); closeModal(); const t = work.recent.find(x=>x.id===id); if (t) t.cancelled = true; renderRx(); rxLoadRecent(); }
+  catch(e){ er.textContent = e.message; er.style.display='block'; } }
 async function rxSave(){
   if (busy) return; const w = work; busy = true;
   const items = Object.keys(w.qty).map(id=>({medId:id, qty:w.qty[id], expiry: w.exp[id] ? w.exp[id] + '-01' : '', doseChanged: !!w.dose[id]}));
