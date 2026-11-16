@@ -33,6 +33,7 @@ header .sub{font-size:13px;opacity:.85;font-weight:400}
 .mtabs{display:flex;gap:5px;padding:8px 12px 0}.mtabs button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:6px 2px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;line-height:1.25;color:var(--ink)}.mtabs button b{display:block;font-size:18px}.mtabs button.on{border-color:var(--pri);background:var(--pri);color:#fff}.mtabs button.rx.on{border-color:#2563a8;background:#2563a8}
 .rxmenu{display:flex;flex-direction:column;gap:10px;margin:12px}.rxmenu button{display:flex;align-items:center;gap:12px;border:0;border-radius:16px;padding:16px;font:inherit;text-align:left;cursor:pointer}.rxmenu button .ic{font-size:28px;width:36px;text-align:center}.rxmenu button b{display:block;font-size:18px}.rxmenu button small{font-size:14px;opacity:.85}.rxmenu .m1{background:#e3f4ec;color:#0b5c3f}.rxmenu .m2{background:#e6f0fb;color:#174a7c}.rxmenu .m3{background:#fdf1dc;color:#7a4b06}.rxmenu .m4{background:#f1f2f5;color:#3d4554}.rxmenu .cnt{margin-left:auto;background:#fff;border-radius:20px;padding:2px 9px;font-size:13px;font-weight:700}
 .lnk{background:none;border:0;color:var(--pri);font:inherit;font-size:14px;font-weight:600;padding:6px 0;cursor:pointer;text-decoration:underline}
+.upd{position:fixed;top:64px;right:12px;z-index:9;background:#fff;border:1px solid var(--line);border-radius:20px;padding:4px 10px;font-size:12px;color:var(--muted);box-shadow:0 2px 6px rgba(0,0,0,.08)}
 .rxn{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:15px}
 .phb{border:1.5px solid var(--line);background:#fff;border-radius:10px;font-size:18px;padding:6px 9px;margin-left:6px;cursor:pointer}
 .modebar{display:flex;gap:6px;padding:10px 12px 0}.modebar button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:9px 4px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}.modebar button.on{border-color:var(--pri);background:var(--pri);color:#fff}.modebar .arr{align-self:center;color:#98a2b3;font-size:20px}.modebar.rxbar{padding-top:6px}.modebar.rxbar button.on{border-color:#2563a8;background:#2563a8}.modebar small{font-weight:400;font-size:12px}
@@ -187,7 +188,10 @@ function pickMode(){ $('app').innerHTML = head('ระบบถ้วยยา',
 async function changeBranch(){ if (busy) return; const nb = await pickBranch(); BRANCH = nb; lsSet('uwc_branch', nb); cups = []; RXR = []; lastErr = ''; view = {screen:'list', tab: PREP?'รอจัด':RECV?'ตรวจแล้ว':'รอตรวจ'}; if (RECV){ NA = lsGet('uwc_na_' + BRANCH); ME = NA || 'เลือกชื่อ'; } loadList(); }
 function setMode(m, force){ const cur = RX?'rx':PREP?'prep':RECV?'recv':'check'; if ((m===cur && !force) || busy) return; PREP = m==='prep'; RX = m==='rx'; RECV = m==='recv'; cups = []; RXR = []; lastErr = ''; view = {screen:'list', tab: PREP?'รอจัด':RECV?'ตรวจแล้ว':'รอตรวจ'}; if (RECV){ NA = lsGet('uwc_na_' + BRANCH); ME = NA || 'เลือกชื่อ'; } else if (NURSE) ME = NURSE; document.title = (RX ? 'รับยาจากญาติ' : PREP ? '① จัดยาใส่ถ้วย' : RECV ? '③ กระดานรับถ้วยยา' : '② ตรวจนับถ้วยยา') + ' · U Well Care'; loadList().then(()=>{ if (RECV && !NA) pickNA(); }); }
 /* ---------- 💊 รับยาจากญาติ (เติมยาเดิม) ---------- */
-async function rxLoad(){ loading(); try{ const r = await api('rxResidents'); RXR = r.residents; lastErr=''; }catch(e){ lastErr = e.message; } renderRxList(); }
+async function rxLoad(){ const key = 'R:' + BRANCH, c = cGet(key);
+  if (c){ RXR = c; lastErr=''; renderRxList(); upd(true); } else loading();
+  try{ const r = await api('rxResidents'); RXR = r.residents; cSet(key, RXR); lastErr=''; }catch(e){ lastErr = e.message; }
+  upd(false); if (RX && !work) renderRxList(); }
 let rxF = 'all';
 function rxRowHtml(r){ return `<div class="rxr" onclick="openRx('${esc(r.id)}')"><div class="rm"><small>ห้อง</small>${esc(r.room||'-')}</div><div style="flex:1;min-width:0"><div class="nm">${esc(r.name)}</div><div class="mt">ยา ${r.n} ตัว</div></div>${r.low?`<span class="lowb">⚠️ ใกล้หมด ${r.low}</span>`:''}<span class="chev">›</span></div>`; }
 function rxFilter(){ const q = rxQ.trim().toLowerCase(); return RXR.filter(r=>(!q || (r.name+' '+r.room).toLowerCase().includes(q)) && (rxF!=='low' || r.low)); }
@@ -201,7 +205,15 @@ function renderRxList(){
   rxRows();
 }
 function rxRows(){ const el = $('rxrows'); if (!el) return; el.innerHTML = rxFilter().map(rxRowHtml).join('') || '<p class="meta" style="text-align:center;padding:20px">ไม่พบคนไข้</p>'; }
-async function openRx(id, view){ loading(); try{ const r = await api('rxMeds',{residentId:id}); work = {rx:true, view:view||'menu', res:r.resident, meds:r.meds, qty:{}, exp:{}, dose:{}, photos:[], up:0, note:'', recent:null, newMeds:[]}; lastErr=''; renderRx(); window.scrollTo(0,0); rxLoadRecent(); }catch(e){ lastErr = e.message; renderRxList(); } }
+async function openRx(id, view){ const key = 'M:' + BRANCH + ':' + id, c = cGet(key);
+  const mk = d => ({rx:true, view:view||'menu', res:d.resident, meds:d.meds, qty:{}, exp:{}, dose:{}, photos:[], up:0, note:'', recent:d.recent||null, newMeds:d.newMeds||[]});
+  if (c){ work = mk(c); lastErr=''; renderRx(); window.scrollTo(0,0); upd(true); } else loading();
+  try{ const r = await api('rxMeds',{residentId:id, withRecent:true}); cSet(key, {resident:r.resident, meds:r.meds, recent:r.recent, newMeds:r.newMeds});
+    if (!c){ work = mk(r); lastErr=''; renderRx(); window.scrollTo(0,0); }
+    if (r.recent===undefined && work && work.res.id===id) rxLoadRecent();
+    else if (work && work.rx && work.res.id===id){ work.meds = r.meds; work.recent = r.recent||[]; work.newMeds = r.newMeds||[]; if (!busy && (work.view!=='recv' || !Object.keys(work.qty).length)) renderRx(); }
+  }catch(e){ if (!c){ lastErr = e.message; renderRxList(); } }
+  upd(false); }
 function rxSet(id, v){ v = Math.max(0, Math.min(5000, Math.round(Number(v)||0))); if (v) work.qty[id] = v; else delete work.qty[id]; renderRx(); }
 function rxAdd(id, d){ rxSet(id, (work.qty[id]||0) + d); }
 function rxCount(){ return Object.keys(work.qty).length; }
@@ -287,14 +299,14 @@ function rxAskCancel(id){ const t = (work.recent||[]).find(x=>x.id===id); if (!t
   openModal(`<h3>ยกเลิกรายการรับยานี้?</h3><p><b>${esc(t.name)}</b><br>${esc(t.at)} · รับ ${fmt(t.qty)} · ${esc(t.by)}</p><input id="rxreason" class="rxn" placeholder="เหตุผล เช่น ใส่จำนวนผิด / เลือกคนไข้ผิด"><div class="err" id="rxcerr" style="display:none;margin:8px 0 0"></div><div class="acts"><button class="btn ghost" onclick="closeModal()">ไม่ยกเลิก</button><button class="btn main" style="width:auto;background:var(--bad)" onclick="rxDoCancel('${esc(id)}')">ยืนยันยกเลิก</button></div>`); }
 async function rxDoCancel(id){ const reason = ($('rxreason').value||'').trim(); const er = $('rxcerr');
   if (!reason){ er.textContent = 'กรุณาใส่เหตุผล'; er.style.display='block'; return; }
-  try{ await api('rxCancel',{txnId:id, reason}); closeModal(); const t = work.recent.find(x=>x.id===id); if (t) t.cancelled = true; renderRx(); rxLoadRecent(); }
+  try{ await api('rxCancel',{txnId:id, reason}); cDelRes(work.res.id); closeModal(); const t = work.recent.find(x=>x.id===id); if (t) t.cancelled = true; renderRx(); rxLoadRecent(); }
   catch(e){ er.textContent = e.message; er.style.display='block'; } }
 async function rxSave(){
   if (busy) return; const w = work; busy = true;
   const items = Object.keys(w.qty).map(id=>({medId:id, qty:w.qty[id], expiry: w.exp[id] ? w.exp[id] + '-01' : '', doseChanged: !!w.dose[id]}));
   loading('กำลังบันทึก…');
   try{ const r = await api('rxSave',{residentId:w.res.id, items, photos:w.photos.map(p=>p.file).filter(Boolean), note:w.note});
-    busy = false; lastErr = ''; const rr = RXR.find(x=>x.id===w.res.id); if (rr) rr.low = Math.max(0, rr.low - r.items.length);
+    busy = false; lastErr = ''; cDelRes(w.res.id); const rr = RXR.find(x=>x.id===w.res.id); if (rr) rr.low = Math.max(0, rr.low - r.items.length);
     $('app').innerHTML = rxHead(esc(w.res.name), `ห้อง ${esc(w.res.room||'-')}`) +
       `<div class="sec"><div class="res ok"><div class="big">✅</div><h2>รับยาแล้ว ${r.items.length} รายการ</h2></div>` +
       r.items.map(i=>`<div class="drug"><b>${esc(i.name)}</b><div class="meta">รับ ${fmt(i.qty)} · ${fmt(i.before)} → <b style="color:var(--ok)">${fmt(i.after)}</b>${i.days!==null?' · พอใช้ ~'+i.days+' วัน':''}</div></div>`).join('') +
@@ -385,14 +397,14 @@ async function nmUp(p){ const w = work; w.up++;
   w.up--; if (work===w) renderNm(); }
 async function nmSave(){ const w = work; if (busy) return; busy = true; loading('กำลังบันทึกยาใหม่…');
   try{ const r = await api('rxAddMed',{residentId:w.res.id, drugName:w.name, strength:w.strength, unit:w.unit, drugCode:w.drug?w.drug.c:'', type:w.type, frequency:w.freq, freqTime:w.ftime||'', doseQty:w.dose, storage:w.storage, instruction:w.instr, qty:w.qty, expiry:w.exp?w.exp+'-01':'', photos:w.photos.map(p=>p.file).filter(Boolean), note:w.note});
-    busy = false; lastErr = ''; const rr = RXR.find(x=>x.id===w.res.id); if (rr) rr.n++;
+    busy = false; lastErr = ''; cDelRes(w.res.id); const rr = RXR.find(x=>x.id===w.res.id); if (rr) rr.n++;
     $('app').innerHTML = nmHead() + `<div class="sec"><div class="res ok"><div class="big">✅</div><h2>เพิ่มยาใหม่แล้ว</h2></div><div class="drug"><b>${esc(w.name+(w.strength?' '+w.strength:''))}</b><div class="meta">${esc(w.freq)} · ครั้งละ ${fmt(w.dose)} ${esc(w.unit)}${w.qty?' · รับ '+fmt(w.qty):''}</div></div>
       <p class="meta">${w.type==='PRN'?'ยา PRN ไม่ใส่ถ้วยประจำมื้อ':r.sync&&r.sync.ok?'ยาเข้าถ้วยที่ยังรอจัดของวันนี้แล้ว':'ยาจะเข้าถ้วยภายใน 30 นาที'} · ยอดคงเหลือในแอปอัปเดตภายใน 15 นาที</p></div>
       <div class="sec"><button class="btn main" onclick="openRx('${esc(w.res.id)}')">กลับเมนูคนไข้</button></div>`; window.scrollTo(0,0);
   }catch(e){ busy = false; const m = String(e.message||''); lastErr = m.replace(/^DUP:\s*/,''); if (/^DUP:/.test(m)) w.step = 1; renderNm(); window.scrollTo(0,0); } }
 async function nmChange(){ const w = work; if (busy) return; busy = true; loading('กำลังบันทึก…');
   try{ const r = await api('rxChangeMed',{medId:w.change.id, type:w.type, frequency:w.freq, freqTime:w.ftime||'', doseQty:w.dose, storage:w.storage, instruction:w.instr, note:w.note});
-    busy = false; lastErr = '';
+    busy = false; lastErr = ''; cDelRes(w.res.id);
     $('app').innerHTML = nmHead() + `<div class="sec"><div class="res ok"><div class="big">✅</div><h2>เปลี่ยนวิธีกินแล้ว</h2></div><div class="drug"><b>${esc(w.change.name)}</b><div class="meta" style="text-decoration:line-through">${esc(w.change.dose||'')}</div><div class="meta">→ <b>${esc(w.freq)} · ครั้งละ ${fmt(w.dose)} ${esc(w.unit)}</b></div></div>
       <p class="meta">${r.carry?`ย้ายยอดคงเหลือ ${fmt(r.carry)} ${esc(w.unit)} มาที่ตัวใหม่ · `:''}${w.type==='PRN'?'':r.sync&&r.sync.ok?'ถ้วยวันนี้ที่ยังรอจัดเปลี่ยนแล้ว':'ถ้วยจะอัปเดตภายใน 30 นาที'}</p></div>
       <div class="sec"><button class="btn main" onclick="openRx('${esc(w.res.id)}')">กลับเมนูคนไข้</button></div>`; window.scrollTo(0,0);
@@ -401,7 +413,7 @@ function nmAskStop(id){ const m = (work.newMeds||[]).find(x=>x.medId===id); if (
   openModal(`<h3>${ch?'ยกเลิกการเปลี่ยนวิธีกิน?':'หยุดยานี้ (เพิ่มผิด)?'}</h3><p><b>${esc(m.name)}</b><br>${esc(m.freq)} · ครั้งละ ${fmt(m.dose)} ${esc(m.unit)}</p><p class="meta">${ch?'กลับไปใช้ยาตัวเดิมตามวิธีกินเดิม · ยอดที่ย้ายมาถูกยกเลิก · ถ้วยวันนี้ที่ยังรอจัดกลับเป็นแบบเดิม':'ยาจะถูกหยุด · รายการรับยาตอนเพิ่มจะถูกยกเลิก · เอาออกจากถ้วยที่ยังรอจัดวันนี้'}</p><input id="nmreason" class="rxn" placeholder="${ch?'เหตุผล เช่น เลือกยาผิดตัว / ใส่ขนาดผิด':'เหตุผล เช่น เลือกยาผิด / ผิดคนไข้'}"><div class="err" id="nmserr" style="display:none;margin:8px 0 0"></div><div class="acts"><button class="btn ghost" onclick="closeModal()">ไม่ทำ</button><button class="btn main" style="width:auto;background:var(--bad)" onclick="nmDoStop('${esc(id)}')">${ch?'ยืนยันยกเลิก':'ยืนยันหยุดยา'}</button></div>`); }
 async function nmDoStop(id){ const reason = ($('nmreason').value||'').trim(), er = $('nmserr');
   if (!reason){ er.textContent = 'กรุณาใส่เหตุผล'; er.style.display='block'; return; }
-  try{ const r = await api('rxStopMed',{medId:id, reason}); closeModal(); const rr = RXR.find(x=>x.id===work.res.id); if (rr && rr.n && !r.restored) rr.n--; openRx(work.res.id, 'fix'); }
+  try{ const r = await api('rxStopMed',{medId:id, reason}); cDelRes(work.res.id); closeModal(); const rr = RXR.find(x=>x.id===work.res.id); if (rr && rr.n && !r.restored) rr.n--; openRx(work.res.id, 'fix'); }
   catch(e){ er.textContent = e.message; er.style.display='block'; } }
 /* ---------- ดูรูปย้อนหลัง ---------- */
 function phBtn(c){ return c.status==='รอจัด' ? '' : `<button class="phb" aria-label="ดูรูปถ้วย" onclick="event.stopPropagation();cupPhotos('${esc(c.id)}')">📷</button>`; }
@@ -441,7 +453,13 @@ async function start(){
     if (!C.LIFF_ID || !C.API_URL) throw new Error('ยังไม่ได้ตั้งค่า LIFF_ID / API_URL');
     if (!window.__liffReady){ await liff.init({liffId: C.LIFF_ID}); window.__liffReady = true; }
     if (!liff.isLoggedIn()){ liff.login({redirectUri: location.href}); return; }
-    const me = await api('me');
+    // โหลดเร็ว: ถ้าเครื่องนี้เคยยืนยันว่าอนุมัติแล้ว เข้าหน้าใช้งานทันที แล้วตรวจสถานะจริงเบื้องหลัง (ทุกคำขอยังตรวจสิทธิ์ที่ระบบอีกชั้น)
+    let sub = ''; try{ sub = (liff.getDecodedIDToken()||{}).sub || ''; }catch(e){}
+    const mk = 'uwc_me_' + sub, meP = api('me'); let cm = null; try{ cm = JSON.parse(lsGet(mk) || 'null'); }catch(e){}
+    let me;
+    if (sub && cm && cm.status === 'approved' && cm.name){ me = cm;
+      meP.then(m => { if (m.status === 'approved'){ lsSet(mk, JSON.stringify({status:'approved', name:m.name})); if (m.name !== cm.name){ NURSE = m.name; if (ME === cm.name) ME = m.name; } } else { lsSet(mk, ''); location.reload(); } }).catch(()=>{}); }
+    else { me = await meP; if (sub && me.status === 'approved') lsSet(mk, JSON.stringify({status:'approved', name:me.name})); }
     if (me.status === 'approved'){ ME = NURSE = me.name; if (!QS.get('m')) return pickMode(); view = {screen:'list', tab: PREP?'รอจัด':RECV?'ตรวจแล้ว':'รอตรวจ'}; if (RECV){ NA = lsGet('uwc_na_' + BRANCH); ME = NA || 'เลือกชื่อ'; } await loadList(); if (RECV && !NA) pickNA(); }
     else if (me.status === 'pending') showPending(me.name);
     else if (me.status === 'new' && Array.isArray(me.nurses)) showRegister(me);
@@ -466,7 +484,12 @@ function showPending(name){
 }
 
 /* ---------- รายการถ้วย ---------- */
-async function loadList(){ if (RX) return rxLoad(); loading(); try{ const r = await api('list', PREP?{mode:'prep'}:RECV?{mode:'receive'}:{}); if (r.staff) STAFF = r.staff; cups = r.cups; lastErr=''; }catch(e){ lastErr = e.message; } renderList();  if (PREP) cupSync(); }
+async function loadList(){ if (RX) return rxLoad(); const mode = PREP?'prep':RECV?'receive':'check', key = 'L:' + BRANCH + ':' + mode, c = cGet(key), same = () => (PREP?'prep':RECV?'receive':'check')===mode && !RX;
+  if (c){ cups = c.cups; if (c.staff) STAFF = c.staff; lastErr=''; renderList(); upd(true); } else loading();
+  try{ const r = await api('list', mode==='prep'?{mode:'prep'}:mode==='receive'?{mode:'receive'}:{}); cSet(key, {cups:r.cups, staff:r.staff||null});
+    if (same()){ if (r.staff) STAFF = r.staff; cups = r.cups; lastErr=''; if (!c || view.screen==='list') renderList(); } }
+  catch(e){ if (same()){ lastErr = e.message; if (!c || view.screen==='list') renderList(); } }
+  upd(false); if (PREP && same()) cupSync(); }
 // ยาที่เพิ่มในแอประบบยาระหว่างวัน: สั่งเติมเข้าถ้วยที่ยังไม่จัดเบื้องหลัง แล้วโหลดรายชื่อใหม่ถ้ามีการเปลี่ยน
 let syncAt = 0, syncing = false;
 async function cupSync(){ if (syncing || Date.now()-syncAt < 45000) return; syncing = true; syncAt = Date.now();
@@ -641,6 +664,13 @@ function nextPrep(id){
 }
 
 /* ---------- โหมด NA รับถ้วย (กระดานรับถ้วยยา) ---------- */
+/* ---------- โหลดเร็ว: แสดงข้อมูลล่าสุดในเครื่องทันที แล้วอัปเดตจากระบบเบื้องหลัง ---------- */
+const dayKey = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate(); };
+function cGet(k){ try{ const v = JSON.parse(lsGet('uwc$' + k) || 'null'); return v && v.d===dayKey() ? v.v : null; }catch(e){ return null; } }
+function cDel(k){ try{ localStorage.removeItem('uwc$' + k); }catch(e){} }
+const cDelRes = id => cDel('M:' + BRANCH + ':' + id);
+function cSet(k, v){ try{ lsSet('uwc$' + k, JSON.stringify({d:dayKey(), v})); }catch(e){} }
+function upd(on){ let el = document.getElementById('upd'); if (!on){ if (el) el.remove(); return; } if (!el){ el = document.createElement('div'); el.id = 'upd'; el.className = 'upd'; el.textContent = '⟳ กำลังอัปเดต…'; document.body.appendChild(el); } }
 function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 function pickNA(){
