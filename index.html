@@ -29,6 +29,7 @@ header .sub{font-size:13px;opacity:.85;font-weight:400}
 .rxx{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;font-size:14px}.rxx input[type=month]{font:inherit;font-size:15px;border:1.5px solid var(--line);border-radius:10px;padding:6px 8px}
 .rxp{display:flex;gap:8px;flex-wrap:wrap}.rxp .ph{width:72px;height:72px;border-radius:10px;background:#eef1f5 center/cover;position:relative}.rxp .ph b{position:absolute;inset:auto 0 0 0;font-size:11px;text-align:center;background:#0008;color:#fff;border-radius:0 0 10px 10px}
 .rxp label{width:72px;height:72px;border-radius:10px;border:2px dashed #b9c2cf;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:var(--muted);cursor:pointer}.rxp label span{font-size:24px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:9px 13px;font:inherit;font-size:15px;color:var(--ink)}.chip.on{background:var(--pri);border-color:var(--pri);color:#fff;font-weight:600}.nmhit{cursor:pointer}.nmadd{width:100%;font-size:17px;padding:13px;border-style:dashed}
 .rxn{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:15px}
 .phb{border:1.5px solid var(--line);background:#fff;border-radius:10px;font-size:18px;padding:6px 9px;margin-left:6px;cursor:pointer}
 .modebar{display:flex;gap:6px;padding:10px 12px 0}.modebar button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:9px 4px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}.modebar button.on{border-color:var(--pri);background:var(--pri);color:#fff}.modebar .arr{align-self:center;color:#98a2b3;font-size:20px}.modebar.rxbar{padding-top:6px}.modebar.rxbar button.on{border-color:#2563a8;background:#2563a8}.modebar small{font-weight:400;font-size:12px}
@@ -158,7 +159,14 @@ function showGuide(){
     'ใส่จำนวน<b>เฉพาะยาที่ญาตินำมา</b> ตัวอื่นเว้นว่าง (ใช้ปุ่ม + − / +10 / +14 / +30 ได้)',
     'ใส่วันหมดอายุ ถ้าหมอเปลี่ยนขนาดยาให้ติ๊ก "หมอเปลี่ยนขนาดยา"',
     'ถ่ายรูปยาให้เห็นฉลาก (กี่รูปก็ได้) → กด <b>✅ บันทึกรับยา</b>'],
-    '<b>รับผิด/บันทึกผิด:</b> ดูหัวข้อ ↩️ ด้านล่าง<br><b>ยาตัวใหม่</b>ที่ยังไม่มีในรายการ หรือหมอเปลี่ยนมื้อ/ขนาด → เพิ่ม/แก้ในแอประบบยา<br>ยอดคงเหลือในแอประบบยาอัปเดตภายใน 15 นาที') +
+    '<b>รับผิด/บันทึกผิด:</b> ดูหัวข้อ ↩️ ด้านล่าง<br><b>ยาตัวใหม่</b>ที่ยังไม่มีในรายการ → ดูหัวข้อ ➕ ด้านล่าง<br>หมอเปลี่ยนมื้อ/ขนาดของยาเดิม → แก้ในแอประบบยา<br>ยอดคงเหลือในแอประบบยาอัปเดตภายใน 15 นาที') +
+  g('➕','เพิ่มยาใหม่ (ยาที่ยังไม่มีในรายการ)','พยาบาลทุกคน',[
+    'กด 💊 รับยาจากญาติ → เลือกคนไข้ → กด <b>➕ เพิ่มยาใหม่</b>',
+    '① <b>เลือกยา</b>: พิมพ์ชื่อ (ไทย/อังกฤษ) แตะยาที่ขึ้น · ไม่มีในรายการ กด ✏️ ใช้ชื่อที่พิมพ์ → เลือกความแรง หน่วย และ ยาประจำ / PRN',
+    '② <b>วิธีกิน</b>: แตะตามฉลาก ไม่เจอกด <b>แบบอื่น ▾</b> (คนไข้ฟีดจะขึ้นเวลาแบบฟีดให้เอง) → ครั้งละกี่เม็ด (กด +/− ทีละ ½) → เก็บที่ตลับจัดยา/หัวเตียง',
+    'ใส่จำนวนที่ญาตินำมา + ถ่ายรูปฉลาก (ถ้ายังไม่ได้รับยา ใส่ 0 ได้)',
+    '③ <b>ยืนยัน</b>: ตรวจสรุปอีกครั้ง → ✅ บันทึกยาใหม่'
+  ], 'ยาประจำจะเข้าถ้วยที่ยังรอจัดของวันนี้ทันที (มื้อที่จัดไปแล้วไม่เปลี่ยน)<br><b>เพิ่มผิด:</b> ในหน้าคนไข้ หัวข้อ 🆕 ยาใหม่ที่เพิ่มผ่าน LINE กด <b>หยุดยานี้</b> ใส่เหตุผล → ยาหยุด ยอดรับถูกยกเลิก และเอาออกจากถ้วยวันนี้ (ทำได้ภายใน 14 วัน)') +
   `<div class="sec" style="border-color:#f0c36d;background:#fffaf0"><h2 style="margin:0 0 4px">↩️ รับยาผิด / บันทึกผิด</h2><p class="meta" style="margin:0 0 8px">เช่น ใส่จำนวนผิด · เลือกคนไข้ผิด · เลือกตัวยาผิด · กดบันทึกซ้ำ</p><ol style="margin:0;padding-left:20px;line-height:1.7"><li>กด 💊 รับยาจากญาติ → เลือก<b>คนไข้ที่บันทึกผิด</b></li><li>เลื่อนลงล่างสุด กล่อง <b>🕘 รับยาล่าสุด (14 วัน)</b> (มีรายการที่รับผ่านแอประบบยาด้วย)</li><li>กด 📷 ดูรูปเทียบได้ ถ้าใช่รายการที่ผิด กด <b>ยกเลิก</b></li><li>ใส่เหตุผล (บังคับ) → กด <b>ยืนยันยกเลิก</b></li><li>ถ้าต้องรับใหม่ ใส่จำนวนที่ถูกด้านบนแล้วบันทึกอีกครั้ง (ถ้าเลือกคนไข้ผิด ให้ไปบันทึกที่คนไข้ที่ถูก)</li></ol><div class="meta" style="margin-top:8px;background:#fff;border-radius:10px;padding:8px 10px;line-height:1.6">รายการไม่ถูกลบ จะขึ้นว่า "ยกเลิกแล้ว" และเก็บชื่อคนยกเลิกกับเหตุผลไว้ · ยกเลิกได้ภายใน 14 วัน · ยอดคงเหลือในแอประบบยาอัปเดตภายใน 15 นาที · ถ้านับยืนยันยอดในแอปไปแล้วหลังรับ ระบบยึดยอดที่นับ</div></div>
   <div class="sec"><h2 style="margin:0 0 6px">📷 ดูรูปย้อนหลัง</h2><ul style="margin:0;padding-left:20px;line-height:1.7"><li><b>ถ้วยยา:</b> ถ้วยที่ทำไปแล้วมีปุ่ม 📷 ในรายชื่อ กดดูรูปตอนจัด ตอนตรวจ และตอน NA รับ พร้อมชื่อคนทำและเวลา</li><li><b>รับยาจากญาติ:</b> ในกล่อง 🕘 รับยาล่าสุด กด 📷 ดูรูปยาที่ถ่ายตอนรับ ถ้าจำนวนไม่ตรงกับรูป กด "รับผิด · ยกเลิก" ได้จากตรงนั้น</li><li>แตะรูปเพื่อขยายเต็มจอ</li></ul></div>
   <div class="sec"><h2 style="margin:0 0 6px">ติดปัญหา</h2><ul style="margin:0;padding-left:20px;line-height:1.7"><li>หน้าค้าง/ข้อมูลไม่ขึ้น → กด ↻ โหลดใหม่ หรือปิด LINE แล้วเปิดลิงก์ใหม่</li><li>คนไข้ผิดสาขา → กดแถบเหลือง 📍 เปลี่ยนสาขา</li><li>ขึ้นกรอบแดง → แคปหน้าจอส่งแอดมิน</li></ul></div><div style="height:90px"></div>
@@ -212,13 +220,13 @@ function renderRx(){
     : `<button class="btn main" ${ok?'':'disabled'} onclick="rxSave()">${up?'กำลังส่งรูป…':'✅ บันทึกรับยา '+n+' รายการ'}</button>`;
   $('app').innerHTML = head(esc(w.res.name), `ห้อง ${esc(w.res.room||'-')} · ผู้รับ ${esc(ME||'')}`, true) + errBox() +
     `<div class="rxst">${st(n,1,'ใส่จำนวน')}${st(nPh,2,'ถ่ายรูป')}${st(false,3,'บันทึก')}</div>
-    <p class="meta" style="margin:8px 16px 0">ใส่จำนวนเฉพาะยาที่ญาตินำมา ตัวอื่นเว้นว่างไว้</p>
+    <p class="meta" style="margin:8px 16px 0">ใส่จำนวนเฉพาะยาที่ญาตินำมา ตัวอื่นเว้นว่างไว้ · ยาที่ไม่มีในรายการ <a href="#" onclick="event.preventDefault();nmOpen()">➕ เพิ่มยาใหม่</a></p>
     ${low.length?`<div class="rxg warn">⚠️ ใกล้หมด / หมดแล้ว (${low.length})</div>${low.map(rxMedHtml).join('')}`:''}
     ${rest.length?`<div class="rxg">${low.length?'ยาอื่น ๆ':'รายการยา'} (${rest.length})</div>${rest.map(rxMedHtml).join('')}`:''}
     ${w.meds.length?'':'<div class="sec">คนไข้นี้ยังไม่มียาในรายการ</div>'}
     <div class="sec"><h2 style="margin:0 0 8px">📷 รูปยาที่รับ ${nPh?`(${nPh})`:''}</h2><div class="rxp">${ph}${cam('', '<span>📷</span>ถ่ายรูป')}</div>
       <p class="meta" style="margin:8px 0">ถ่ายได้หลายรูป ให้เห็นฉลากยา</p><input class="rxn" placeholder="หมายเหตุ เช่น ญาติที่นำยามา" value="${esc(w.note)}" oninput="work.note=this.value"></div>
-    <div class="sec" style="background:#eef5fc;border-color:#cfe0f3;font-size:14px">ℹ️ ยาตัวใหม่ที่ยังไม่มีในรายการ หรือหมอเปลี่ยนมื้อ/ขนาด ให้เพิ่ม/แก้ในแอประบบยา</div>${rxRecentHtml()}<div style="height:110px"></div>
+    <div class="sec"><button class="btn ghost nmadd" onclick="nmOpen()">➕ เพิ่มยาใหม่ <small>(ยาที่ยังไม่มีในรายการ)</small></button><p class="meta" style="margin:8px 0 0">หมอเปลี่ยนมื้อ/ขนาดของยาเดิม ให้แก้ในแอประบบยา</p></div>${nmListHtml()}${rxRecentHtml()}<div style="height:110px"></div>
     <div class="bottom"><div class="hint">${n?`ใส่จำนวนแล้ว ${n} รายการ`:'ยังไม่ได้ใส่จำนวน'} · ${nPh?`รูป ${nPh} รูป`:'ยังไม่ถ่ายรูป'}</div>${btn}</div>`;
 }
 function rxPhoto(inp){
@@ -236,11 +244,13 @@ async function rxUp(p){ const w = work; w.up++; p.err = false;
   catch(e){ p.err = true; lastErr = 'ส่งรูปไม่สำเร็จ แตะถ่ายรูปใหม่อีกครั้ง'; w.photos = w.photos.filter(x=>x!==p); }
   w.up--; if (work===w) renderRx(); }
 /* ---------- ยกเลิกรายการรับยาที่บันทึกผิด ---------- */
-async function rxLoadRecent(){ const w = work; try{ const r = await api('rxRecent',{residentId:w.res.id}); w.recent = r.items; }catch(e){ w.recent = []; w.recentErr = e.message; } if (work===w && !busy) renderRx(); }
+async function rxLoadRecent(){ const w = work; try{ const r = await api('rxRecent',{residentId:w.res.id}); w.recent = r.items; w.newMeds = r.newMeds || []; }catch(e){ w.recent = []; w.recentErr = e.message; } if (work===w && !busy) renderRx(); }
 function rxRecentHtml(){ const w = work; if (!w || !w.rx) return '';
   const body = w.recent===null ? '<p class="meta">กำลังโหลด…</p>' : !w.recent.length ? '<p class="meta">ไม่มีรายการรับยาใน 14 วัน</p>'
     : w.recent.map(t=>`<div class="drug" style="display:flex;gap:8px;align-items:center${t.cancelled?';opacity:.5':''}"><div style="flex:1"><b>${esc(t.name)}</b><div class="meta">${esc(t.at)} · รับ ${fmt(t.qty)} · ${esc(t.by)}</div></div>${(t.photos||[]).length?`<button class="btn ghost" style="font-size:14px;padding:8px 10px" onclick="rxShowPhotos('${esc(t.id)}')">📷 ${t.photos.length}</button>`:''}${t.cancelled?'<span class="pill bad">ยกเลิกแล้ว</span>':`<button class="btn ghost" style="font-size:14px;padding:8px 10px" onclick="rxAskCancel('${esc(t.id)}')">ยกเลิก</button>`}</div>`).join('');
   return `<div class="sec"><h2 style="margin:0 0 4px">🕘 รับยาล่าสุด (14 วัน)</h2><p class="meta" style="margin:0 0 6px">บันทึกผิด กด "ยกเลิก" แล้วรับใหม่ให้ถูก · ยอดในแอปอัปเดตภายใน 15 นาที</p>${body}</div>`; }
+function nmListHtml(){ const w = work; if (!w || !(w.newMeds||[]).length) return '';
+  return `<div class="sec"><h2 style="margin:0 0 4px">🆕 ยาใหม่ที่เพิ่มผ่าน LINE</h2><p class="meta" style="margin:0 0 6px">เพิ่มผิด กด "หยุดยานี้"</p>${w.newMeds.map(m=>`<div class="drug" style="display:flex;gap:8px;align-items:center"><div style="flex:1"><b>${esc(m.name)}</b><div class="meta">${esc(m.freq)} · ครั้งละ ${fmt(m.dose)} ${esc(m.unit)} · ${esc(m.by)}</div></div><button class="btn ghost" style="font-size:14px;padding:8px 10px;width:auto" onclick="nmAskStop('${esc(m.medId)}')">หยุดยานี้</button></div>`).join('')}</div>`; }
 function rxAskCancel(id){ const t = (work.recent||[]).find(x=>x.id===id); if (!t) return;
   openModal(`<h3>ยกเลิกรายการรับยานี้?</h3><p><b>${esc(t.name)}</b><br>${esc(t.at)} · รับ ${fmt(t.qty)} · ${esc(t.by)}</p><input id="rxreason" class="rxn" placeholder="เหตุผล เช่น ใส่จำนวนผิด / เลือกคนไข้ผิด"><div class="err" id="rxcerr" style="display:none;margin:8px 0 0"></div><div class="acts"><button class="btn ghost" onclick="closeModal()">ไม่ยกเลิก</button><button class="btn main" style="width:auto;background:var(--bad)" onclick="rxDoCancel('${esc(id)}')">ยืนยันยกเลิก</button></div>`); }
 async function rxDoCancel(id){ const reason = ($('rxreason').value||'').trim(); const er = $('rxcerr');
@@ -260,6 +270,87 @@ async function rxSave(){
     window.scrollTo(0,0);
   }catch(e){ busy = false; lastErr = e.message; renderRx(); }
 }
+/* ---------- ➕ เพิ่มยาใหม่ (ยาที่ยังไม่มีในรายการ) + หยุดยาที่เพิ่มผิด ---------- */
+let CAT = null; const NM_COMMON = ['OD pc','bid pc','tid pc','hs','OD ac','bid ac','tid ac','OD pc เย็น'];
+async function nmOpen(){ const res = work.res; work = {nm:true, res, step:1, q:'', drug:null, name:'', strength:'', unit:'', type:'ประจำ', freq:'', more:false, dose:1, storage:'ตลับจัดยา', instr:'', qty:0, exp:'', photos:[], up:0, note:'', fi:null};
+  loading('กำลังโหลดรายชื่อยา…');
+  try{ const [c, f] = await Promise.all([CAT ? {items:CAT} : api('rxCatalog'), api('rxFreq',{residentId:res.id})]); CAT = c.items; work.fi = f; lastErr=''; renderNm(); window.scrollTo(0,0); }
+  catch(e){ lastErr = e.message; openRx(res.id); } }
+function nmBack(){ const w = work; if (busy) return; if (w.step>1){ w.step--; lastErr=''; renderNm(); window.scrollTo(0,0); } else openRx(w.res.id); }
+function nmHead(){ const w = work; return `<header><button class="back" onclick="nmBack()" aria-label="กลับ">‹</button><h1>➕ เพิ่มยาใหม่<div class="sub">${esc(w.res.name)} · ห้อง ${esc(w.res.room||'-')}</div></h1></header>`; }
+const nmChip = (on, txt, js) => `<button class="chip${on?' on':''}" onclick="${js}">${txt}</button>`;
+function nmSet(k, v){ work[k] = v; if (k==='type'){ work.freq = ''; work.more = false; } renderNm(); }
+function nmPick(i){ const d = nmHits()[i]; if (!d) return; const w = work; w.drug = d; w.name = d.n; const ss = nmStrengths(d); w.strength = ss.length===1 ? ss[0] : ''; w.unit = d.u || w.unit; renderNm(); }
+function nmTyped(){ const w = work; w.drug = null; w.name = w.q.trim(); w.strength = ''; renderNm(); }
+function nmClear(){ const w = work; w.drug = null; w.name = ''; w.strength = ''; w.q = ''; renderNm(); setTimeout(()=>{ const e = $('nmq'); if (e) e.focus(); }, 30); }
+function nmHits(){ const q = work.q.trim().toLowerCase(); if (q.length < 2) return []; return CAT.filter(d=>(d.n+' '+d.t+' '+d.c).toLowerCase().includes(q)).slice(0,8); }
+const nmStrengths = d => String(d && d.s || '').split(',').map(s=>s.trim()).filter(Boolean);
+function nmQ(v){ work.q = v; const el = $('nmhits'); if (el) el.innerHTML = nmHitsHtml(); }
+function nmHitsHtml(){ const w = work, h = nmHits(), q = w.q.trim();
+  return h.map((d,i)=>`<div class="drug nmhit" onclick="nmPick(${i})"><b>${esc(d.n)}</b>${d.t?` <span class="meta">${esc(d.t)}</span>`:''}<div class="meta">${esc(d.s||'')}${d.u?' · '+esc(d.u):''}</div></div>`).join('') +
+    (q.length>=2 ? `<div class="drug nmhit" onclick="nmTyped()">✏️ ไม่มีในรายการ ใช้ชื่อที่พิมพ์: <b>${esc(q)}</b></div>` : '<p class="meta">พิมพ์ชื่อยาอย่างน้อย 2 ตัวอักษร (ไทยหรืออังกฤษ)</p>'); }
+function nmFreqs(){ const w = work; return w.type==='PRN' ? w.fi.prn : w.fi.freq; }
+const nmShort = f => String(f).split(' — ')[1] || f;
+function nmStep1(){ const w = work;
+  if (!w.name) return `<div class="sec"><h2 style="margin:0 0 8px">1 · ค้นหายา</h2><input id="nmq" class="rxn" placeholder="เช่น amlo, พารา, metformin" value="${esc(w.q)}" oninput="nmQ(this.value)" autocomplete="off"><div id="nmhits" style="margin-top:6px">${nmHitsHtml()}</div></div>`;
+  const ss = nmStrengths(w.drug), units = w.fi.units.slice(); if (w.unit && !units.includes(w.unit)) units.unshift(w.unit);
+  return `<div class="sec"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><div class="meta">ยาที่เลือก</div><b style="font-size:18px">${esc(w.name)}</b>${w.drug?'':' <span class="pill">พิมพ์เอง</span>'}</div><button class="btn ghost" style="width:auto;font-size:14px;padding:8px 10px" onclick="nmClear()">เปลี่ยนยา</button></div></div>
+    <div class="sec"><h2 style="margin:0 0 8px">ความแรง</h2>${ss.length?`<div class="chips">${ss.map(s=>nmChip(w.strength===s, esc(s), `nmSet('strength',${esc(JSON.stringify(s))})`)).join('')}</div>`:''}
+      <input class="rxn" style="margin-top:8px" placeholder="หรือพิมพ์ เช่น 5 mg" value="${esc(w.strength)}" onchange="work.strength=this.value.trim()"></div>
+    <div class="sec"><h2 style="margin:0 0 8px">หน่วย</h2><div class="chips">${units.map(u=>nmChip(w.unit===u, esc(u), `nmSet('unit',${esc(JSON.stringify(u))})`)).join('')}</div></div>
+    <div class="sec"><h2 style="margin:0 0 8px">ประเภท</h2><div class="chips">${nmChip(w.type==='ประจำ','ยาประจำ (ให้ตามมื้อ)',"nmSet('type','ประจำ')")}${nmChip(w.type==='PRN','PRN (เมื่อมีอาการ)',"nmSet('type','PRN')")}</div></div>`; }
+function nmStep2(){ const w = work, all = nmFreqs();
+  const common = w.type==='PRN' ? all : NM_COMMON.map(k=>all.find(f=>f.split(' — ')[0]===k)).filter(Boolean);
+  const showMore = w.more || (w.freq && !common.includes(w.freq));
+  const ph = w.photos.map(p=>`<div class="ph" style="background-image:url(${p.thumb})">${p.file?'':`<b>${p.err?'⚠️':'กำลังส่ง…'}</b>`}</div>`).join('');
+  return `<div class="sec"><h2 style="margin:0 0 4px">วิธีกิน ${w.fi.feed&&w.type!=='PRN'?'<span class="pill">คนไข้ฟีด</span>':''}</h2><p class="meta" style="margin:0 0 8px">เลือกตามฉลาก/คำสั่งแพทย์</p>
+      <div class="chips">${common.map(f=>nmChip(w.freq===f, esc(w.type==='PRN'?f:nmShort(f)), `nmSet('freq',${esc(JSON.stringify(f))})`)).join('')}${w.type==='PRN'?'':nmChip(showMore, 'แบบอื่น ▾', "nmSet('more',true)")}</div>
+      ${showMore && w.type!=='PRN' ? `<select class="rxn" style="margin-top:8px" onchange="nmSet('freq',this.value)"><option value="">— เลือกวิธีกินแบบอื่น —</option>${all.map(f=>`<option ${w.freq===f?'selected':''} value="${esc(f)}">${esc(f)}</option>`).join('')}</select>` : ''}
+      ${w.freq?`<div class="rxa" style="margin-top:8px">✓ ${esc(w.freq)}</div>`:''}</div>
+    <div class="sec"><h2 style="margin:0 0 8px">ครั้งละ</h2><div class="rxq"><button class="pm" onclick="nmDose(-0.5)" aria-label="ลด">−</button><b style="font-size:22px;min-width:60px;text-align:center">${fmt(w.dose)}</b><button class="pm" onclick="nmDose(0.5)" aria-label="เพิ่ม">+</button><span class="un">${esc(w.unit)}</span></div></div>
+    <div class="sec"><h2 style="margin:0 0 8px">เก็บยาที่</h2><div class="chips">${nmChip(w.storage==='ตลับจัดยา','ตลับจัดยา',"nmSet('storage','ตลับจัดยา')")}${nmChip(w.storage==='หัวเตียง','หัวเตียง',"nmSet('storage','หัวเตียง')")}</div>
+      <input class="rxn" style="margin-top:8px" placeholder="คำแนะนำเพิ่มเติม (ถ้ามี) เช่น เคี้ยวก่อนกลืน" value="${esc(w.instr)}" onchange="work.instr=this.value"></div>
+    <div class="sec"><h2 style="margin:0 0 8px">💊 ญาตินำมากี่${esc(w.unit)}</h2><div class="rxq"><span class="lb">รับมา</span><button class="pm" onclick="nmQty(-1)" aria-label="ลด">−</button><input type="number" inputmode="numeric" min="0" value="${w.qty||''}" placeholder="0" onchange="nmQtySet(this.value)"><button class="pm" onclick="nmQty(1)" aria-label="เพิ่ม">+</button><span class="un">${esc(w.unit)}</span></div>
+      <div class="rxc"><button onclick="nmQty(10)">+10</button><button onclick="nmQty(14)">+14</button><button onclick="nmQty(30)">+30</button></div>
+      <div class="rxx"><label>หมดอายุ <input type="month" value="${esc(w.exp)}" onchange="work.exp=this.value"></label></div>
+      <h2 style="margin:12px 0 8px">📷 รูปยา/ฉลาก ${w.qty?'<small style="color:var(--bad)">(ต้องมี)</small>':''}</h2><div class="rxp">${ph}<label><span>📷</span>ถ่ายรูป<input type="file" accept="image/*" capture="environment" style="display:none" onchange="nmPhoto(this)"></label></div>
+      <input class="rxn" style="margin-top:8px" placeholder="หมายเหตุ เช่น ญาติที่นำยามา" value="${esc(w.note)}" onchange="work.note=this.value"></div>`; }
+function nmDose(d){ const w = work; w.dose = Math.max(0.5, Math.min(20, w.dose + d)); renderNm(); }
+function nmQty(d){ nmQtySet((work.qty||0) + d); }
+function nmQtySet(v){ work.qty = Math.max(0, Math.min(5000, Math.round(Number(v)||0))); renderNm(); }
+function nmStep3(){ const w = work, nPh = w.photos.filter(p=>p.file).length;
+  const row = (k, v) => `<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)"><span class="meta" style="width:90px;flex:none">${k}</span><b style="flex:1">${v}</b></div>`;
+  return `<div class="sec"><h2 style="margin:0 0 8px">ตรวจก่อนบันทึก</h2>${row('ยา', esc(w.name + (w.strength?' '+w.strength:'')))}${row('ประเภท', w.type==='PRN'?'PRN (เมื่อมีอาการ)':'ยาประจำ')}${row('วิธีกิน', esc(w.freq))}${row('ครั้งละ', fmt(w.dose)+' '+esc(w.unit))}${row('เก็บที่', esc(w.storage))}${w.instr?row('คำแนะนำ', esc(w.instr)):''}${row('รับมา', w.qty ? fmt(w.qty)+' '+esc(w.unit)+(w.exp?' · หมดอายุ '+esc(w.exp):'') : 'ยังไม่รับยา (เพิ่มแค่รายการ)')}${row('รูป', nPh+' รูป')}</div>
+    <div class="sec" style="background:#eef5fc;border-color:#cfe0f3;font-size:14px">ℹ️ ${w.type==='PRN'?'ยา PRN ไม่ใส่ถ้วยประจำมื้อ':'บันทึกแล้วยาจะเข้าถ้วยที่ยังรอจัดของวันนี้ทันที (มื้อที่จัดไปแล้วไม่เปลี่ยน)'} · เพิ่มผิดกด "หยุดยานี้" ในหน้าคนไข้ได้</div>`; }
+function nmOk(){ const w = work; if (w.step===1) return w.name && w.unit ? '' : (!w.name ? 'เลือกหรือพิมพ์ชื่อยาก่อน' : 'เลือกหน่วยยาก่อน');
+  if (w.step===2){ if (!w.freq) return 'เลือกวิธีกินก่อน'; if (w.up) return 'กำลังส่งรูป…'; if (w.qty && !w.photos.some(p=>p.file)) return 'ถ่ายรูปยาก่อน'; } return ''; }
+function renderNm(){ const w = work; if (!w || !w.nm) return; const bad = nmOk();
+  const st = (i, t) => `<div class="${w.step>i?'done':''}"><i>${w.step>i?'✓':i}</i>${t}</div>`;
+  const btn = w.step<3 ? `<button class="btn main" ${bad?'disabled':''} onclick="nmNext()">${bad||'ถัดไป ›'}</button>` : `<button class="btn main" onclick="nmSave()">✅ บันทึกยาใหม่</button>`;
+  $('app').innerHTML = nmHead() + errBox() + `<div class="rxst">${st(1,'เลือกยา')}${st(2,'วิธีกิน+รับยา')}${st(3,'ยืนยัน')}</div>` + (w.step===1?nmStep1():w.step===2?nmStep2():nmStep3()) + `<div style="height:110px"></div><div class="bottom">${btn}</div>`; }
+function nmNext(){ const w = work; if (nmOk()) return; w.strength = (w.strength||'').trim(); w.step++; lastErr=''; renderNm(); window.scrollTo(0,0); }
+function nmPhoto(inp){ const f = inp.files && inp.files[0]; if (!f) return; const w = work;
+  const img = new Image(); img.onload = () => { const s = Math.min(1, 1280/Math.max(img.width,img.height)); const cv = document.createElement('canvas');
+    cv.width = Math.round(img.width*s); cv.height = Math.round(img.height*s); cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+    const p = {thumb: cv.toDataURL('image/jpeg', 0.5), data: cv.toDataURL('image/jpeg', 0.75), file:null}; w.photos.push(p); URL.revokeObjectURL(img.src); nmUp(p); renderNm(); };
+  img.src = URL.createObjectURL(f); }
+async function nmUp(p){ const w = work; w.up++;
+  try{ const r = await api('rxPhoto',{photo:p.data, kind: w.photos.indexOf(p)===0 ? 'batch' : 'extra'}); p.file = r.file; p.data = null; }
+  catch(e){ lastErr = 'ส่งรูปไม่สำเร็จ ถ่ายใหม่อีกครั้ง'; w.photos = w.photos.filter(x=>x!==p); }
+  w.up--; if (work===w) renderNm(); }
+async function nmSave(){ const w = work; if (busy) return; busy = true; loading('กำลังบันทึกยาใหม่…');
+  try{ const r = await api('rxAddMed',{residentId:w.res.id, drugName:w.name, strength:w.strength, unit:w.unit, drugCode:w.drug?w.drug.c:'', type:w.type, frequency:w.freq, doseQty:w.dose, storage:w.storage, instruction:w.instr, qty:w.qty, expiry:w.exp?w.exp+'-01':'', photos:w.photos.map(p=>p.file).filter(Boolean), note:w.note});
+    busy = false; lastErr = ''; const rr = RXR.find(x=>x.id===w.res.id); if (rr) rr.n++;
+    $('app').innerHTML = nmHead() + `<div class="sec"><div class="res ok"><div class="big">✅</div><h2>เพิ่มยาใหม่แล้ว</h2></div><div class="drug"><b>${esc(w.name+(w.strength?' '+w.strength:''))}</b><div class="meta">${esc(w.freq)} · ครั้งละ ${fmt(w.dose)} ${esc(w.unit)}${w.qty?' · รับ '+fmt(w.qty):''}</div></div>
+      <p class="meta">${w.type==='PRN'?'ยา PRN ไม่ใส่ถ้วยประจำมื้อ':r.sync&&r.sync.ok?'ยาเข้าถ้วยที่ยังรอจัดของวันนี้แล้ว':'ยาจะเข้าถ้วยภายใน 30 นาที'} · ยอดคงเหลือในแอปอัปเดตภายใน 15 นาที</p></div>
+      <div class="sec"><button class="btn main" onclick="openRx('${esc(w.res.id)}')">กลับหน้าคนไข้</button></div>`; window.scrollTo(0,0);
+  }catch(e){ busy = false; const m = String(e.message||''); lastErr = m.replace(/^DUP:\s*/,''); if (/^DUP:/.test(m)) w.step = 1; renderNm(); window.scrollTo(0,0); } }
+function nmAskStop(id){ const m = (work.newMeds||[]).find(x=>x.medId===id); if (!m) return;
+  openModal(`<h3>หยุดยานี้ (เพิ่มผิด)?</h3><p><b>${esc(m.name)}</b><br>${esc(m.freq)} · ครั้งละ ${fmt(m.dose)} ${esc(m.unit)}</p><p class="meta">ยาจะถูกหยุด · รายการรับยาตอนเพิ่มจะถูกยกเลิก · เอาออกจากถ้วยที่ยังรอจัดวันนี้</p><input id="nmreason" class="rxn" placeholder="เหตุผล เช่น เลือกยาผิด / ผิดคนไข้"><div class="err" id="nmserr" style="display:none;margin:8px 0 0"></div><div class="acts"><button class="btn ghost" onclick="closeModal()">ไม่หยุด</button><button class="btn main" style="width:auto;background:var(--bad)" onclick="nmDoStop('${esc(id)}')">ยืนยันหยุดยา</button></div>`); }
+async function nmDoStop(id){ const reason = ($('nmreason').value||'').trim(), er = $('nmserr');
+  if (!reason){ er.textContent = 'กรุณาใส่เหตุผล'; er.style.display='block'; return; }
+  try{ await api('rxStopMed',{medId:id, reason}); closeModal(); const rr = RXR.find(x=>x.id===work.res.id); if (rr && rr.n) rr.n--; openRx(work.res.id); }
+  catch(e){ er.textContent = e.message; er.style.display='block'; } }
 /* ---------- ดูรูปย้อนหลัง ---------- */
 function phBtn(c){ return c.status==='รอจัด' ? '' : `<button class="phb" aria-label="ดูรูปถ้วย" onclick="event.stopPropagation();cupPhotos('${esc(c.id)}')">📷</button>`; }
 const PHC = {};
