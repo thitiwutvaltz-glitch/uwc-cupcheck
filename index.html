@@ -127,7 +127,42 @@ async function api(action, data){
 function loading(t){ $('app').innerHTML = `<div class="center"><div class="spin"></div>${t||'กำลังโหลด…'}</div>`; }
 function head(title, sub, back){ return `<header>${back?'<button class="back" onclick="goList()" aria-label="กลับ">‹</button>':''}<h1>${title}<div class="sub">${sub||''}</div></h1>${ME?`<span class="me" ${RECV?'onclick="pickNA()" style="cursor:pointer"':''}>👤 ${esc(ME)}${RECV?' ▾':''}</span>`:''}</header>`; }
 function modeBar(){ if (WEB) return ''; return `<div class="brbar" onclick="changeBranch()">📍 สาขา <b>${esc(BTH())}</b> <span>เปลี่ยนสาขา ▾</span></div><div class="modebar"><button class="${PREP&&!RX?'on':''}" onclick="setMode('prep')">① จัดยา</button><span class="arr">›</span><button class="${!PREP&&!RX&&!RECV?'on':''}" onclick="setMode('check')">② ตรวจนับ</button><span class="arr">›</span><button class="${RECV?'on':''}" onclick="setMode('recv')">③ รับถ้วย</button></div><div class="modebar rxbar"><button class="${RX?'on':''}" onclick="setMode('rx')">💊 รับยาจากญาติ <small>(เติมสต็อก)</small></button></div>`; }
-function pickMode(){ $('app').innerHTML = head('ระบบถ้วยยา', BTH() + ' · วันนี้') + `<div class="sec"><h2>รอบถ้วยยา (ทำตามลำดับ)</h2><button class="btn main" style="margin-bottom:10px" onclick="setMode('prep',1)">① จัดยาใส่ถ้วย <small style="font-weight:400">· พยาบาลคนที่ 1</small></button><button class="btn main" style="margin-bottom:6px" onclick="setMode('check',1)">② ตรวจนับถ้วยยา <small style="font-weight:400">· พยาบาลคนที่ 2</small></button><button class="btn main" style="margin:4px 0 14px" onclick="setMode('recv',1)">③ รับถ้วยไปให้ยา <small style="font-weight:400">· NA</small></button><h2>งานอื่น</h2><button class="btn main" style="background:#2563a8" onclick="setMode('rx',1)">💊 รับยาจากญาติ <small style="font-weight:400">· เติมสต็อก ทำได้ทุกเวลา</small></button><p class="meta">สลับได้ตลอดจากปุ่มด้านบนของรายชื่อ</p></div>`; }
+/* ---------- 0 · คู่มือการใช้งาน ---------- */
+function showGuide(){
+  const g = (icon, title, who, steps, tips) => `<div class="sec"><h2 style="margin:0 0 2px">${icon} ${title}</h2><p class="meta" style="margin:0 0 8px">${who}</p><ol style="margin:0;padding-left:20px;line-height:1.7">${steps.map(x=>`<li>${x}</li>`).join('')}</ol>${tips?`<div class="meta" style="margin-top:8px;background:#f6f8fb;border-radius:10px;padding:8px 10px;line-height:1.6">${tips}</div>`:''}</div>`;
+  $('app').innerHTML = head('📖 คู่มือการใช้งาน', 'ระบบถ้วยยา · LINE') +
+  `<div class="sec" style="background:#eef5fc;border-color:#cfe0f3"><b>ลำดับของแต่ละมื้อ</b><br>① พยาบาลคนที่ 1 จัดยาใส่ถ้วย → ② พยาบาลคนที่ 2 ตรวจนับ → ③ NA รับถ้วยไปให้ยา<br><span class="meta">💊 รับยาจากญาติ ทำได้ทุกเวลา แยกจากรอบถ้วย</span></div>
+  <div class="sec"><h2 style="margin:0 0 6px">เริ่มใช้ครั้งแรก</h2><ol style="margin:0;padding-left:20px;line-height:1.7"><li>กดลิงก์ที่ปักหมุดในกลุ่ม RN</li><li>เลือกสาขา (เครื่องจะจำไว้ เปลี่ยนได้ที่แถบเหลือง 📍)</li><li>เลือกชื่อตัวเอง ทำครั้งเดียว ใช้ได้ทันที</li></ol><p class="meta" style="margin:8px 0 0">ถ้าไม่เจอชื่อตัวเอง หรือขึ้น "รอแอดมินอนุมัติ" แจ้งแอดมิน</p></div>` +
+  g('①','จัดยาใส่ถ้วย','พยาบาลคนที่ 1',[
+    'กด ① จัดยาใส่ถ้วย → เลือกคนไข้จากแท็บ <b>รอจัด</b> (เรียงตามมื้อ)',
+    'ใส่ยาลงถ้วยตามจำนวนที่ขึ้น แล้ว<b>แตะติ๊กทีละตัว</b>',
+    'กด 📷 ถ่ายรูปถ้วยหลังจัด (ถ่ายเฉพาะเม็ดยา ห้ามติดหน้าหรือชื่อคนไข้)',
+    'กด <b>✅ จัดเสร็จ ส่งตรวจ</b> → กด <b>คนถัดไป</b> ได้เลย'],
+    'แท็บ <b>ถูกส่งกลับ</b> = ถ้วยที่ตรวจแล้วนับไม่ตรง หรือ NA แจ้งว่าไม่ตรง ต้องจัดใหม่ก่อน<br>ยาที่เพิ่มในแอประบบยาระหว่างวัน จะเข้าถ้วยที่ยังไม่จัดเอง ภายในไม่กี่วินาทีหลังเปิดหน้านี้') +
+  g('②','ตรวจนับถ้วยยา','พยาบาลคนที่ 2 (ควรเป็นคนละคนกับคนจัด)',[
+    'กด ② ตรวจนับถ้วยยา → เลือกถ้วยจากแท็บ <b>รอตรวจ</b>',
+    '<b>นับเม็ดในถ้วยเอง</b> แล้วกดตัวเลขให้ตรงกับที่นับได้ (หน้าจอไม่บอกจำนวนที่จัด เพื่อให้นับจริง)',
+    'กด 📷 ถ่ายรูปถ้วย',
+    'กด <b>ตรวจนับเสร็จ</b> → ระบบเทียบให้: ตรง = ✅ ตรวจแล้ว · ไม่ตรง = ส่งกลับไปจัดใหม่'],
+    '<b>ทำงานคนเดียว:</b> ถ้าคุณเป็นคนจัดถ้วยนั้นเอง ระบบจะถามยืนยัน "ตรวจคนเดียว" และขึ้นป้าย ⚠️ ให้ NA เห็น ให้ดูละเอียดเป็นพิเศษ') +
+  g('③','รับถ้วยไปให้ยา','NA',[
+    'กด ③ รับถ้วยไปให้ยา → เลือกชื่อตัวเอง (ครั้งแรก)',
+    'เลือกถ้วยที่ ✅ ตรวจแล้ว → ดูยาในถ้วยให้ตรงรายการ แล้ว<b>แตะติ๊กทีละตัว</b>',
+    'กด 📷 ถ่ายรูปถ้วยตอนรับ',
+    'ตรง → กด <b>✅ รับถ้วยแล้ว</b> แล้วไปให้ยาตามปกติ (บันทึกให้ยาในข้อ 6 แอปสาขาเหมือนเดิม)',
+    'ไม่ตรง → กด <b>⚠️ ยาไม่ตรง แจ้งพยาบาล</b> ใส่สั้น ๆ ว่าไม่ตรงอย่างไร <b>ห้ามให้ยาจากถ้วยนั้น</b>'],
+    'ถ้วยที่มีป้าย ⚠️ พยาบาลตรวจคนเดียว ให้ดูยาละเอียดเป็นพิเศษ') +
+  g('💊','รับยาจากญาติ (เติมสต็อก)','พยาบาล · ทำได้ทุกเวลา',[
+    'กด 💊 รับยาจากญาติ → ค้นชื่อหรือห้อง เลือกคนไข้ (คนที่มีป้ายเหลือง = ยาใกล้หมด)',
+    'ใส่จำนวน<b>เฉพาะยาที่ญาตินำมา</b> ตัวอื่นเว้นว่าง (ใช้ปุ่ม + − / +10 / +14 / +30 ได้)',
+    'ใส่วันหมดอายุ ถ้าหมอเปลี่ยนขนาดยาให้ติ๊ก "หมอเปลี่ยนขนาดยา"',
+    'ถ่ายรูปยาให้เห็นฉลาก (กี่รูปก็ได้) → กด <b>✅ บันทึกรับยา</b>'],
+    '<b>บันทึกผิด:</b> เลื่อนลงล่างสุด กล่อง 🕘 รับยาล่าสุด (14 วัน) → กด <b>ยกเลิก</b> ใส่เหตุผล แล้วรับใหม่ให้ถูก<br><b>ยาตัวใหม่</b>ที่ยังไม่มีในรายการ หรือหมอเปลี่ยนมื้อ/ขนาด → เพิ่ม/แก้ในแอประบบยา<br>ยอดคงเหลือในแอประบบยาอัปเดตภายใน 15 นาที') +
+  `<div class="sec"><h2 style="margin:0 0 6px">ติดปัญหา</h2><ul style="margin:0;padding-left:20px;line-height:1.7"><li>หน้าค้าง/ข้อมูลไม่ขึ้น → กด ↻ โหลดใหม่ หรือปิด LINE แล้วเปิดลิงก์ใหม่</li><li>คนไข้ผิดสาขา → กดแถบเหลือง 📍 เปลี่ยนสาขา</li><li>ขึ้นกรอบแดง → แคปหน้าจอส่งแอดมิน</li></ul></div><div style="height:90px"></div>
+  <div class="bottom"><button class="btn main" onclick="pickMode()">‹ กลับเมนู</button></div>`;
+  window.scrollTo(0,0);
+}
+function pickMode(){ $('app').innerHTML = head('ระบบถ้วยยา', BTH() + ' · วันนี้') + `<div class="sec"><button class="btn ghost" style="width:100%;margin-bottom:12px" onclick="showGuide()">📖 0 · คู่มือการใช้งาน</button><h2>รอบถ้วยยา (ทำตามลำดับ)</h2><button class="btn main" style="margin-bottom:10px" onclick="setMode('prep',1)">① จัดยาใส่ถ้วย <small style="font-weight:400">· พยาบาลคนที่ 1</small></button><button class="btn main" style="margin-bottom:6px" onclick="setMode('check',1)">② ตรวจนับถ้วยยา <small style="font-weight:400">· พยาบาลคนที่ 2</small></button><button class="btn main" style="margin:4px 0 14px" onclick="setMode('recv',1)">③ รับถ้วยไปให้ยา <small style="font-weight:400">· NA</small></button><h2>งานอื่น</h2><button class="btn main" style="background:#2563a8" onclick="setMode('rx',1)">💊 รับยาจากญาติ <small style="font-weight:400">· เติมสต็อก ทำได้ทุกเวลา</small></button><p class="meta">สลับได้ตลอดจากปุ่มด้านบนของรายชื่อ</p></div>`; }
 async function changeBranch(){ if (busy) return; const nb = await pickBranch(); BRANCH = nb; lsSet('uwc_branch', nb); cups = []; RXR = []; lastErr = ''; view = {screen:'list', tab: PREP?'รอจัด':RECV?'ตรวจแล้ว':'รอตรวจ'}; if (RECV){ NA = lsGet('uwc_na_' + BRANCH); ME = NA || 'เลือกชื่อ'; } loadList(); }
 function setMode(m, force){ const cur = RX?'rx':PREP?'prep':RECV?'recv':'check'; if ((m===cur && !force) || busy) return; PREP = m==='prep'; RX = m==='rx'; RECV = m==='recv'; cups = []; RXR = []; lastErr = ''; view = {screen:'list', tab: PREP?'รอจัด':RECV?'ตรวจแล้ว':'รอตรวจ'}; if (RECV){ NA = lsGet('uwc_na_' + BRANCH); ME = NA || 'เลือกชื่อ'; } else if (NURSE) ME = NURSE; document.title = (RX ? 'รับยาจากญาติ' : PREP ? '① จัดยาใส่ถ้วย' : RECV ? '③ กระดานรับถ้วยยา' : '② ตรวจนับถ้วยยา') + ' · U Well Care'; loadList().then(()=>{ if (RECV && !NA) pickNA(); }); }
 /* ---------- 💊 รับยาจากญาติ (เติมยาเดิม) ---------- */
