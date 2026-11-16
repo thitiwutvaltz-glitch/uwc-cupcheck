@@ -30,6 +30,7 @@ header .sub{font-size:13px;opacity:.85;font-weight:400}
 .rxp{display:flex;gap:8px;flex-wrap:wrap}.rxp .ph{width:72px;height:72px;border-radius:10px;background:#eef1f5 center/cover;position:relative}.rxp .ph b{position:absolute;inset:auto 0 0 0;font-size:11px;text-align:center;background:#0008;color:#fff;border-radius:0 0 10px 10px}
 .rxp label{width:72px;height:72px;border-radius:10px;border:2px dashed #b9c2cf;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:var(--muted);cursor:pointer}.rxp label span{font-size:24px}
 .rxn{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:15px}
+.phb{border:1.5px solid var(--line);background:#fff;border-radius:10px;font-size:18px;padding:6px 9px;margin-left:6px;cursor:pointer}
 .modebar{display:flex;gap:6px;padding:10px 12px 0}.modebar button{flex:1;border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:9px 4px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}.modebar button.on{border-color:var(--pri);background:var(--pri);color:#fff}.modebar .arr{align-self:center;color:#98a2b3;font-size:20px}.modebar.rxbar{padding-top:6px}.modebar.rxbar button.on{border-color:#2563a8;background:#2563a8}.modebar small{font-weight:400;font-size:12px}
 .tab{flex:1;background:#fff;border-radius:10px;padding:9px 4px;font:inherit;font-size:14px;color:var(--muted);cursor:pointer;border:1px solid var(--line)}
 .tab.on{background:var(--pri);color:#fff;border-color:var(--pri);font-weight:600}
@@ -158,7 +159,8 @@ function showGuide(){
     'ใส่วันหมดอายุ ถ้าหมอเปลี่ยนขนาดยาให้ติ๊ก "หมอเปลี่ยนขนาดยา"',
     'ถ่ายรูปยาให้เห็นฉลาก (กี่รูปก็ได้) → กด <b>✅ บันทึกรับยา</b>'],
     '<b>บันทึกผิด:</b> เลื่อนลงล่างสุด กล่อง 🕘 รับยาล่าสุด (14 วัน) → กด <b>ยกเลิก</b> ใส่เหตุผล แล้วรับใหม่ให้ถูก<br><b>ยาตัวใหม่</b>ที่ยังไม่มีในรายการ หรือหมอเปลี่ยนมื้อ/ขนาด → เพิ่ม/แก้ในแอประบบยา<br>ยอดคงเหลือในแอประบบยาอัปเดตภายใน 15 นาที') +
-  `<div class="sec"><h2 style="margin:0 0 6px">ติดปัญหา</h2><ul style="margin:0;padding-left:20px;line-height:1.7"><li>หน้าค้าง/ข้อมูลไม่ขึ้น → กด ↻ โหลดใหม่ หรือปิด LINE แล้วเปิดลิงก์ใหม่</li><li>คนไข้ผิดสาขา → กดแถบเหลือง 📍 เปลี่ยนสาขา</li><li>ขึ้นกรอบแดง → แคปหน้าจอส่งแอดมิน</li></ul></div><div style="height:90px"></div>
+  `<div class="sec"><h2 style="margin:0 0 6px">📷 ดูรูปย้อนหลัง</h2><ul style="margin:0;padding-left:20px;line-height:1.7"><li><b>ถ้วยยา:</b> ถ้วยที่ทำไปแล้วมีปุ่ม 📷 ในรายชื่อ กดดูรูปตอนจัด ตอนตรวจ และตอน NA รับ พร้อมชื่อคนทำและเวลา</li><li><b>รับยาจากญาติ:</b> ในกล่อง 🕘 รับยาล่าสุด กด 📷 ดูรูปยาที่ถ่ายตอนรับ ถ้าจำนวนไม่ตรงกับรูป กด "รับผิด · ยกเลิก" ได้จากตรงนั้น</li><li>แตะรูปเพื่อขยายเต็มจอ</li></ul></div>
+  <div class="sec"><h2 style="margin:0 0 6px">ติดปัญหา</h2><ul style="margin:0;padding-left:20px;line-height:1.7"><li>หน้าค้าง/ข้อมูลไม่ขึ้น → กด ↻ โหลดใหม่ หรือปิด LINE แล้วเปิดลิงก์ใหม่</li><li>คนไข้ผิดสาขา → กดแถบเหลือง 📍 เปลี่ยนสาขา</li><li>ขึ้นกรอบแดง → แคปหน้าจอส่งแอดมิน</li></ul></div><div style="height:90px"></div>
   <div class="bottom"><button class="btn main" onclick="pickMode()">‹ กลับเมนู</button></div>`;
   window.scrollTo(0,0);
 }
@@ -236,7 +238,7 @@ async function rxUp(p){ const w = work; w.up++; p.err = false;
 async function rxLoadRecent(){ const w = work; try{ const r = await api('rxRecent',{residentId:w.res.id}); w.recent = r.items; }catch(e){ w.recent = []; w.recentErr = e.message; } if (work===w && !busy) renderRx(); }
 function rxRecentHtml(){ const w = work; if (!w || !w.rx) return '';
   const body = w.recent===null ? '<p class="meta">กำลังโหลด…</p>' : !w.recent.length ? '<p class="meta">ไม่มีรายการรับยาใน 14 วัน</p>'
-    : w.recent.map(t=>`<div class="drug" style="display:flex;gap:8px;align-items:center${t.cancelled?';opacity:.5':''}"><div style="flex:1"><b>${esc(t.name)}</b><div class="meta">${esc(t.at)} · รับ ${fmt(t.qty)} · ${esc(t.by)}</div></div>${t.cancelled?'<span class="pill bad">ยกเลิกแล้ว</span>':`<button class="btn ghost" style="font-size:14px;padding:8px 10px" onclick="rxAskCancel('${esc(t.id)}')">ยกเลิก</button>`}</div>`).join('');
+    : w.recent.map(t=>`<div class="drug" style="display:flex;gap:8px;align-items:center${t.cancelled?';opacity:.5':''}"><div style="flex:1"><b>${esc(t.name)}</b><div class="meta">${esc(t.at)} · รับ ${fmt(t.qty)} · ${esc(t.by)}</div></div>${(t.photos||[]).length?`<button class="btn ghost" style="font-size:14px;padding:8px 10px" onclick="rxShowPhotos('${esc(t.id)}')">📷 ${t.photos.length}</button>`:''}${t.cancelled?'<span class="pill bad">ยกเลิกแล้ว</span>':`<button class="btn ghost" style="font-size:14px;padding:8px 10px" onclick="rxAskCancel('${esc(t.id)}')">ยกเลิก</button>`}</div>`).join('');
   return `<div class="sec"><h2 style="margin:0 0 4px">🕘 รับยาล่าสุด (14 วัน)</h2><p class="meta" style="margin:0 0 6px">บันทึกผิด กด "ยกเลิก" แล้วรับใหม่ให้ถูก · ยอดในแอปอัปเดตภายใน 15 นาที</p>${body}</div>`; }
 function rxAskCancel(id){ const t = (work.recent||[]).find(x=>x.id===id); if (!t) return;
   openModal(`<h3>ยกเลิกรายการรับยานี้?</h3><p><b>${esc(t.name)}</b><br>${esc(t.at)} · รับ ${fmt(t.qty)} · ${esc(t.by)}</p><input id="rxreason" class="rxn" placeholder="เหตุผล เช่น ใส่จำนวนผิด / เลือกคนไข้ผิด"><div class="err" id="rxcerr" style="display:none;margin:8px 0 0"></div><div class="acts"><button class="btn ghost" onclick="closeModal()">ไม่ยกเลิก</button><button class="btn main" style="width:auto;background:var(--bad)" onclick="rxDoCancel('${esc(id)}')">ยืนยันยกเลิก</button></div>`); }
@@ -257,6 +259,24 @@ async function rxSave(){
     window.scrollTo(0,0);
   }catch(e){ busy = false; lastErr = e.message; renderRx(); }
 }
+/* ---------- ดูรูปย้อนหลัง ---------- */
+function phBtn(c){ return c.status==='รอจัด' ? '' : `<button class="phb" aria-label="ดูรูปถ้วย" onclick="event.stopPropagation();cupPhotos('${esc(c.id)}')">📷</button>`; }
+const PHC = {};
+async function phLoad(){ const imgs = document.querySelectorAll('#sheet img[data-p]');
+  for (const im of imgs){ const p = im.dataset.p; try{ if (!PHC[p]) PHC[p] = (await api('photoGet',{path:p})).data; if (im.isConnected){ im.src = PHC[p]; im.removeAttribute('data-p'); im.style.minHeight=''; } }catch(e){ if (im.isConnected){ const d = document.createElement('div'); d.className='meta'; d.textContent='โหลดรูปไม่ได้: '+e.message; im.replaceWith(d); } } } }
+const phImg = p => `<img class="photo" data-p="${esc(p)}" alt="รูป" style="min-height:160px;background:#eef1f5;width:100%;border-radius:10px;margin-top:6px" onclick="window.open(this.src)">`;
+async function cupPhotos(id){ const c = cups.find(x=>x.id===id) || {name:'', round:''};
+  openModal(`<h3>📷 ${esc(c.name)} · ${esc(c.round||'')}</h3><div class="center"><div class="spin"></div>กำลังโหลด…</div>`);
+  try{ const r = await api('cupPhotos',{cupId:id});
+    $('sheet').innerHTML = `<h3>📷 ${esc(c.name)} · ${esc(c.round||'')}</h3><div style="max-height:70vh;overflow:auto">` +
+      r.steps.map(s=>`<div style="margin:10px 0"><b>${esc(s.k)}</b> <span class="meta">${s.by?esc(String(s.by).split('@')[0])+' · '+esc(s.at):'ยังไม่ได้ทำ'}</span>${s.photo?phImg(s.photo):(s.by?'<div class="meta">ไม่มีรูป</div>':'')}</div>`).join('') +
+      (r.note?`<div class="meta" style="margin-top:6px">${esc(r.note)}</div>`:'') + `</div><div class="acts"><button class="btn ghost" onclick="closeModal()">ปิด</button></div>`;
+    phLoad();
+  }catch(e){ $('sheet').innerHTML = `<div class="err">⚠️ ${esc(e.message)}</div><div class="acts"><button class="btn ghost" onclick="closeModal()">ปิด</button></div>`; } }
+function rxShowPhotos(id){ const t = (work.recent||[]).find(x=>x.id===id); if (!t) return;
+  openModal(`<h3>📷 ${esc(t.name)}</h3><p class="meta" style="margin:0">${esc(t.at)} · รับ ${fmt(t.qty)} · ${esc(t.by)}${t.cancelled?' · ยกเลิกแล้ว':''}</p><div style="max-height:65vh;overflow:auto">${t.photos.map(phImg).join('')}</div>
+   <div class="acts"><button class="btn ghost" onclick="closeModal()">ปิด</button>${t.cancelled?'':`<button class="btn main" style="width:auto;background:var(--bad)" onclick="closeModal();rxAskCancel('${esc(id)}')">รับผิด · ยกเลิก</button>`}</div>`);
+  phLoad(); }
 function errBox(){ return lastErr ? `<div class="err">⚠️ ${esc(lastErr)}</div>` : ''; }
 
 function pickBranch(){
@@ -318,7 +338,7 @@ function renderList(){ if (RX) return renderRxList(); if (PREP) return renderPre
     const tag = c.status==='ไม่ตรง' ? `<span class="pill bad">❌ ${esc(c.note||'นับไม่ตรง')}</span>` : c.status==='ตรวจแล้ว' ? `<span class="pill ok">✅ ตรวจโดย ${esc(c.checkBy)}</span>` : '';
     body += `<div class="cup ${c.status==='รอตรวจ'?'tap':''}" ${c.status==='รอตรวจ'?`onclick="openCup('${esc(c.id)}')"`:''}><div class="info">
       <div class="nm">${esc(c.name)}</div><div class="meta">ห้อง ${esc(c.room)} · ${esc(c.timing)} · ${c.drugs.length} ตัวยา${c.prepAt?' · จัด '+esc(c.prepAt)+' น.':''}</div>${tag}</div>
-      ${c.status==='รอตรวจ'?'<span class="chev">›</span>':''}</div>`;
+      ${phBtn(c)}${c.status==='รอตรวจ'?'<span class="chev">›</span>':''}</div>`;
   });
   if (!items.length) body = `<div class="empty">${view.tab==='รอตรวจ'?'ไม่มีถ้วยรอตรวจตอนนี้':'ไม่มีรายการ'}</div>`;
   $('app').innerHTML = head('② ตรวจนับถ้วยยา',BTH() + ' · วันนี้') + modeBar() + errBox() +
@@ -428,7 +448,7 @@ function renderPrepList(){
     const tag = c.status==='ไม่ตรง' ? `<span class="pill bad">❌ ตรวจนับไม่ตรง ต้องจัดใหม่</span>` : c.status==='รอตรวจ' ? `<span class="pill ok">ส่งตรวจแล้ว${c.prepAt?' '+esc(c.prepAt)+' น.':''}</span>` : '';
     body += `<div class="cup ${can(c.status)?'tap':''}" ${can(c.status)?`onclick="openPrep('${esc(c.id)}')"`:''}><div class="info">
       <div class="nm">${esc(c.name)}</div><div class="meta">ห้อง ${esc(c.room)} · ${esc(c.timing)} · ${c.drugs.length} ตัวยา</div>${tag}</div>
-      ${can(c.status)?'<span class="chev">›</span>':''}</div>`;
+      ${phBtn(c)}${can(c.status)?'<span class="chev">›</span>':''}</div>`;
   });
   if (!items.length) body = `<div class="empty">ไม่มีรายการ</div>`;
   $('app').innerHTML = head('① จัดยาใส่ถ้วย',BTH() + ' · วันนี้') + modeBar() + errBox() +
@@ -498,7 +518,7 @@ function renderRecvList(){
     const tag = solo + (c.status==='รับแล้ว' ? `<span class="pill ok">✅ รับโดย ${esc(c.receiveBy)}${c.receiveAt?' '+esc(c.receiveAt)+' น.':''}</span>` : '');
     body += `<div class="cup ${can?'tap':''}" ${can?`onclick="openRecv('${esc(c.id)}')"`:''}><div class="info">
       <div class="nm">${esc(c.name)}</div><div class="meta">ห้อง ${esc(c.room)} · ${esc(c.timing)} · ${c.drugs.length} ตัวยา · ${fmt(c.drugs.reduce((a,d)=>a+d.q,0))} เม็ด</div>${tag}</div>
-      ${can?'<span class="chev">›</span>':''}</div>`;
+      ${phBtn(c)}${can?'<span class="chev">›</span>':''}</div>`;
   });
   if (!items.length) body = `<div class="empty">${view.tab==='ตรวจแล้ว'?'ยังไม่มีถ้วยที่พยาบาลตรวจเสร็จ':'ไม่มีรายการ'}</div>`;
   $('app').innerHTML = head('③ กระดานรับถ้วยยา',BTH() + ' · วันนี้') + modeBar() + errBox() +
