@@ -318,7 +318,7 @@ async function rxSave(){
 let CAT = null; const NM_COMMON = ['OD pc','bid pc','tid pc','hs','OD ac','bid ac','tid ac','OD pc เย็น'];
 async function nmOpen(){ const res = work.res; work = {nm:true, res, step:1, q:'', drug:null, name:'', strength:'', unit:'', type:'ประจำ', freq:'', more:false, ftime:'', dose:1, storage:'ตลับจัดยา', instr:'', qty:0, exp:'', photos:[], up:0, note:'', fi:null};
   loading('กำลังโหลดรายชื่อยา…');
-  try{ const [c, f] = await Promise.all([CAT ? {items:CAT} : api('rxCatalog'), api('rxFreq',{residentId:res.id})]); CAT = c.items; work.fi = f; lastErr=''; renderNm(); window.scrollTo(0,0); }
+  try{ const [c, f] = await Promise.all([api('rxCatalog'), api('rxFreq',{residentId:res.id})]); CAT = c.items; work.fi = f; lastErr=''; renderNm(); window.scrollTo(0,0); }
   catch(e){ lastErr = e.message; openRx(res.id); } }
 function nmBack(){ const w = work; if (busy) return; if (w.step > (w.change?2:1)){ w.step--; lastErr=''; renderNm(); window.scrollTo(0,0); } else openRx(w.res.id, w.change?'pick':'menu'); }
 async function nmOpenChange(id){ const old = work.meds.find(m=>m.id===id); if (!old) return; const res = work.res, raw = old.raw||{};
