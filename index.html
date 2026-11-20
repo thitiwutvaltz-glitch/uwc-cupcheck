@@ -495,7 +495,7 @@ let syncAt = 0, syncing = false;
 async function cupSync(){ if (syncing || Date.now()-syncAt < 45000) return; syncing = true; syncAt = Date.now();
   try{ const r = await api('cupSync'); if ((r.cups||r.filled) && PREP && view.screen==='list'){ const l = await api('list',{mode:'prep'}); if (PREP && view.screen==='list'){ cups = l.cups; renderList(); } } }catch(e){}
   syncing = false; }
-function goList(){ if (RX){ work = null; if (RXR.length){ lastErr=''; renderRxList(); window.scrollTo(0,0); } else rxLoad(); return; } view = {screen:'list', tab:view.tab||(PREP?'รอจัด':RECV?'ตรวจแล้ว':'รอตรวจ')}; if ((PREP||RECV) && cups.length){ lastErr=''; renderList(); window.scrollTo(0,0); } else loadList(); }
+function goList(){ if (RX){ work = null; if (RXR.length){ lastErr=''; renderRxList(); window.scrollTo(0,0); } else rxLoad(); return; } view = {screen:'list', tab:view.tab||(PREP?'รอจัด':RECV?'ตรวจแล้ว':'รอตรวจ'), by:view.by, q:view.q}; if ((PREP||RECV) && cups.length){ lastErr=''; renderList(); window.scrollTo(0,0); } else loadList(); }
 function renderList(){ if (RX) return renderRxList(); if (PREP) return renderPrepList(); if (RECV) return renderRecvList();
   const n = s => cups.filter(c=>c.status===s).length;
   const items = cups.filter(c=>c.status===view.tab);
@@ -608,21 +608,38 @@ async function notifyChat(c, r){
 /* ---------- โหมดจัดยา (RN คนที่ 1) ---------- */
 function renderPrepList(){
   const n = s => cups.filter(c=>c.status===s).length;
-  const items = cups.filter(c=>c.status===view.tab); const can = s => s==='รอจัด'||s==='ไม่ตรง';
-  let body = '', lastRound = '';
-  items.forEach(c=>{
-    if (c.round!==lastRound){ body += `<div class="round">มื้อ${esc(c.round)}</div>`; lastRound = c.round; }
+  const can = s => s==='รอจัด'||s==='ไม่ตรง';
+  if (!view.by){ try{ view.by = localStorage.getItem('uwc_prepBy') || 'round'; }catch(e){ view.by = 'round'; } }
+  const q = String(view.q||'').trim().toLowerCase();
+  const RO = {'เช้า':0,'กลางวัน':1,'เย็น':2,'ก่อนนอน':3};
+  let items = cups.filter(c=>c.status===view.tab && (!q || (c.name+' '+c.room).toLowerCase().includes(q)));
+  if (view.by==='person') items = items.slice().sort((a,b)=>String(a.room).localeCompare(String(b.room),'th',{numeric:true}) || String(a.name).localeCompare(String(b.name)) || (RO[a.round]-RO[b.round]));
+  const card = (c, sub) => {
     const tag = c.status==='ไม่ตรง' ? `<span class="pill bad">❌ ตรวจนับไม่ตรง ต้องจัดใหม่</span>` : c.status==='รอตรวจ' ? `<span class="pill ok">ส่งตรวจแล้ว${c.prepAt?' '+esc(c.prepAt)+' น.':''}</span>` : '';
-    body += `<div class="cup ${can(c.status)?'tap':''}" ${can(c.status)?`onclick="openPrep('${esc(c.id)}')"`:''}><div class="info">
-      <div class="nm">${esc(c.name)}</div><div class="meta">ห้อง ${esc(c.room)} · ${esc(c.timing)} · ${c.drugs.length} ตัวยา</div>${tag}</div>
+    return `<div class="cup ${can(c.status)?'tap':''}" ${can(c.status)?`onclick="openPrep('${esc(c.id)}')"`:''}><div class="info">
+      <div class="nm">${sub ? 'มื้อ' + esc(c.round) : esc(c.name)}</div><div class="meta">${sub ? '' : 'ห้อง ' + esc(c.room) + ' · '}${esc(c.timing)} · ${c.drugs.length} ตัวยา</div>${tag}</div>
       ${phBtn(c)}${can(c.status)?'<span class="chev">›</span>':''}</div>`;
+  };
+  let body = '', last = '';
+  items.forEach(c=>{
+    if (view.by==='person'){
+      const k = c.name + '|' + c.room;
+      if (k!==last){ const m = items.filter(x=>x.name===c.name && x.room===c.room).length; body += `<div class="round">${esc(c.name)} · ห้อง ${esc(c.room)} · ${m} ถ้วย</div>`; last = k; }
+      body += card(c, true);
+    } else {
+      if (c.round!==last){ body += `<div class="round">มื้อ${esc(c.round)}</div>`; last = c.round; }
+      body += card(c, false);
+    }
   });
-  if (!items.length) body = `<div class="empty">ไม่มีรายการ</div>`;
+  if (!items.length) body = `<div class="empty">${q ? 'ไม่พบชื่อ/ห้องที่ค้น' : 'ไม่มีรายการ'}</div>`;
+  const tg = (k,l) => `<button class="tab ${view.by===k?'on':''}" onclick="view.by='${k}';try{localStorage.setItem('uwc_prepBy','${k}')}catch(e){};renderList()">${l}</button>`;
   $('app').innerHTML = head('① จัดยาใส่ถ้วย',BTH() + ' · วันนี้') + modeBar() + errBox() +
    `<div class="tabs">${['รอจัด','ไม่ตรง','รอตรวจ'].map(t=>`<button class="tab ${view.tab===t?'on':''}" onclick="view.tab='${t}';renderList()">${t==='ไม่ตรง'?'ถูกส่งกลับ':t==='รอตรวจ'?'ส่งตรวจแล้ว':t} (${n(t)})</button>`).join('')}</div>
+   <div class="tabs" style="margin-top:0">${tg('round','🕒 เรียงตามมื้อ')}${tg('person','👤 เรียงตามคนไข้')}</div>
+   <div style="padding:0 12px 6px"><input id="pq" placeholder="🔎 ค้นชื่อ / ห้อง" value="${esc(view.q||'')}" oninput="view.q=this.value;renderList();const i=$('pq');i.focus();i.setSelectionRange(i.value.length,i.value.length)" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d6dee0;border-radius:10px;font:inherit;font-size:16px"></div>
    <div class="list">${body}</div><div class="bottom"><button class="btn ghost" style="width:100%" onclick="loadList()">↻ โหลดใหม่</button></div>`;
 }
-function openPrep(id){ view = {screen:'prep', cupId:id, tab:view.tab||'รอจัด'}; work = {done:{}, photo:null, up:null, file:null, upErr:'', kind:'prep'}; renderPrep(true); }
+function openPrep(id){ view = {screen:'prep', cupId:id, tab:view.tab||'รอจัด', by:view.by, q:view.q}; work = {done:{}, photo:null, up:null, file:null, upErr:'', kind:'prep'}; renderPrep(true); }
 function renderPrep(top){
   const c = cups.find(x=>x.id===view.cupId), y = window.scrollY;
   const drugs = c.drugs.map(d=>`<div class="pd ${work.done[d.id]?'on':''}" onclick="work.done['${esc(d.id)}']=!work.done['${esc(d.id)}'];renderPrep()">
@@ -646,21 +663,29 @@ async function doPrep(){
     if (!file && work.up){ try{ file = await work.up; }catch(e){ file = null; } }
     const r = await api('prepDone', file ? {cupId:c.id, photoFile:file} : {cupId:c.id, photo:work.photo}); lastErr=''; busy=false;
     c.status = 'รอตรวจ'; c.prepAt = new Date().toTimeString().slice(0,5);
-    const nx = nextPrep(c.id);
-    view = {screen:'done', cupId:c.id, tab:view.tab||'รอจัด'};
+    const same = nextSame(c), nx = nextPrep(c.id, c);
+    view = {screen:'done', cupId:c.id, tab:view.tab||'รอจัด', by:view.by, q:view.q};
+    const leftN = cups.filter(x=>x.status==='รอจัด'||x.status==='ไม่ตรง').length;
     $('app').innerHTML = head(esc(c.name), `ห้อง ${esc(c.room)} · ${esc(c.round)} ${esc(c.timing)}`, true) +
       `<div class="res ok"><div class="big">📤</div><h2>ส่งตรวจแล้ว</h2><p>${c.drugs.length} ตัวยา · ${fmt(r.total)} เม็ด</p><p>${WEB ? 'ให้ RN อีกคนตรวจนับในเมนู 2️⃣' : 'ให้ RN อีกคนตรวจนับ (แท็บ 🔍 ตรวจนับ)'}</p></div>
-       <div class="note">${nx ? 'เหลือรอจัดอีก ' + cups.filter(x=>x.status==='รอจัด'||x.status==='ไม่ตรง').length + ' ถ้วย' : '🎉 จัดครบทุกถ้วยแล้ว'}</div>
-       <div class="bottom">${nx ? `<button class="btn main" onclick="openPrep('${esc(nx.id)}')">➡️ คนถัดไป: ${esc(nx.name)} · ${esc(nx.round)}</button>
-        <button class="btn ghost" style="width:100%;margin-top:8px" onclick="goList()">กลับหน้ารายชื่อ</button>`
-        : `<button class="btn main" style="background:var(--pri)" onclick="goList()">กลับหน้ารายชื่อ</button>`}</div>`;
+       <div class="note">${same ? esc(c.name) + ' ยังเหลืออีก ' + cups.filter(x=>x.name===c.name&&x.room===c.room&&(x.status==='รอจัด'||x.status==='ไม่ตรง')).length + ' ถ้วย · ' : ''}${leftN ? 'รอจัดทั้งหมด ' + leftN + ' ถ้วย' : '🎉 จัดครบทุกถ้วยแล้ว'}</div>
+       <div class="bottom">${same ? `<button class="btn main" onclick="openPrep('${esc(same.id)}')">➡️ คนเดิม มื้อ${esc(same.round)} (${same.drugs.length} ตัวยา)</button>` : ''}
+        ${nx ? `<button class="btn ${same?'ghost':'main'}" style="width:100%;margin-top:8px" onclick="openPrep('${esc(nx.id)}')">👤 คนถัดไป: ${esc(nx.name)} · ${esc(nx.round)}</button>` : ''}
+        <button class="btn ghost" style="width:100%;margin-top:8px" onclick="goList()">กลับหน้ารายชื่อ</button></div>`;
   }catch(e){ busy=false; lastErr = e.message; renderPrep(true); }
 }
-function nextPrep(id){
-  const open = x => x.status==='รอจัด' || x.status==='ไม่ตรง';
-  const i = cups.findIndex(x=>x.id===id);
-  const after = cups.slice(i+1).concat(cups.slice(0, Math.max(i,0)));
-  return after.find(x=>x.status==='ไม่ตรง') || after.find(open) || null;
+function nextSame(c){ // ถ้วยถัดไปของคนไข้คนเดิม (เรียงมื้อ) — จัดรายบุคคลต่อเนื่อง
+  const RO = {'เช้า':0,'กลางวัน':1,'เย็น':2,'ก่อนนอน':3};
+  return cups.filter(x=>x.id!==c.id && x.name===c.name && x.room===c.room && (x.status==='รอจัด'||x.status==='ไม่ตรง'))
+    .sort((a,b)=>(RO[a.round]-RO[b.round]))[0] || null;
+}
+function nextPrep(id, c){ // คนถัดไป (ข้ามคนเดิม) ตามลำดับที่เห็นในหน้ารายชื่อ
+  const open = x => (x.status==='รอจัด' || x.status==='ไม่ตรง') && !(c && x.name===c.name && x.room===c.room);
+  const RO = {'เช้า':0,'กลางวัน':1,'เย็น':2,'ก่อนนอน':3};
+  const list = view.by==='person' ? cups.slice().sort((a,b)=>String(a.room).localeCompare(String(b.room),'th',{numeric:true}) || String(a.name).localeCompare(String(b.name)) || (RO[a.round]-RO[b.round])) : cups;
+  const i = list.findIndex(x=>x.id===id);
+  const after = list.slice(i+1).concat(list.slice(0, Math.max(i,0)));
+  return after.find(x=>x.status==='ไม่ตรง' && open(x)) || after.find(open) || null;
 }
 
 /* ---------- โหมด NA รับถ้วย (กระดานรับถ้วยยา) ---------- */
