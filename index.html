@@ -484,19 +484,19 @@ function showPending(name){
 }
 
 /* ---------- รายการถ้วย ---------- */
-async function loadList(){ if (RX) return rxLoad(); const mode = PREP?'prep':RECV?'receive':'check', key = 'L:' + BRANCH + ':' + mode, c = cGet(key), same = () => (PREP?'prep':RECV?'receive':'check')===mode && !RX;
+async function loadList(){ if (RX) return rxLoad(); const mode = PREP?'prep':RECV?'receive':'check', key = 'L:' + BRANCH + ':' + mode, c0 = cGet(key), c = c0 && Array.isArray(c0.cups) ? c0 : null, same = () => (PREP?'prep':RECV?'receive':'check')===mode && !RX;
   if (c){ cups = c.cups; if (c.staff) STAFF = c.staff; lastErr=''; renderList(); upd(true); } else loading();
-  try{ const r = await api('list', mode==='prep'?{mode:'prep'}:mode==='receive'?{mode:'receive'}:{}); cSet(key, {cups:r.cups, staff:r.staff||null});
+  try{ const r = await api('list', mode==='prep'?{mode:'prep'}:mode==='receive'?{mode:'receive'}:{}); if (!Array.isArray(r.cups)) throw new Error('โหลดรายการถ้วยไม่สำเร็จ กด ↻ โหลดใหม่'); cSet(key, {cups:r.cups, staff:r.staff||null});
     if (same()){ if (r.staff) STAFF = r.staff; cups = r.cups; lastErr=''; if (!c || view.screen==='list') renderList(); } }
   catch(e){ if (same()){ lastErr = e.message; if (!c || view.screen==='list') renderList(); } }
   upd(false); if (PREP && same()) cupSync(); }
 // ยาที่เพิ่มในแอประบบยาระหว่างวัน: สั่งเติมเข้าถ้วยที่ยังไม่จัดเบื้องหลัง แล้วโหลดรายชื่อใหม่ถ้ามีการเปลี่ยน
 let syncAt = 0, syncing = false;
 async function cupSync(){ if (syncing || Date.now()-syncAt < 45000) return; syncing = true; syncAt = Date.now();
-  try{ const r = await api('cupSync'); if ((r.cups||r.filled) && PREP && view.screen==='list'){ const l = await api('list',{mode:'prep'}); if (PREP && view.screen==='list'){ cups = l.cups; renderList(); } } }catch(e){}
+  try{ const r = await api('cupSync'); if ((r.cups||r.filled) && PREP && view.screen==='list'){ const l = await api('list',{mode:'prep'}); if (PREP && view.screen==='list' && Array.isArray(l.cups)){ cups = l.cups; renderList(); } } }catch(e){}
   syncing = false; }
 function goList(){ if (RX){ work = null; if (RXR.length){ lastErr=''; renderRxList(); window.scrollTo(0,0); } else rxLoad(); return; } view = {screen:'list', tab:view.tab||(PREP?'รอจัด':RECV?'ตรวจแล้ว':'รอตรวจ'), by:view.by, q:view.q}; if ((PREP||RECV) && cups.length){ lastErr=''; renderList(); window.scrollTo(0,0); } else loadList(); }
-function renderList(){ if (RX) return renderRxList(); if (PREP) return renderPrepList(); if (RECV) return renderRecvList();
+function renderList(){ if (!Array.isArray(cups)) cups = []; if (RX) return renderRxList(); if (PREP) return renderPrepList(); if (RECV) return renderRecvList();
   const n = s => cups.filter(c=>c.status===s).length;
   const items = cups.filter(c=>c.status===view.tab);
   let body = '', lastRound = '';
