@@ -667,7 +667,7 @@ async function doPrep(){
     view = {screen:'done', cupId:c.id, tab:view.tab||'รอจัด', by:view.by, q:view.q};
     const leftN = cups.filter(x=>x.status==='รอจัด'||x.status==='ไม่ตรง').length;
     $('app').innerHTML = head(esc(c.name), `ห้อง ${esc(c.room)} · ${esc(c.round)} ${esc(c.timing)}`, true) +
-      `<div class="res ok"><div class="big">📤</div><h2>ส่งตรวจแล้ว</h2><p>${c.drugs.length} ตัวยา · ${fmt(r.total)} เม็ด</p><p>${WEB ? 'ให้ RN อีกคนตรวจนับในเมนู 2️⃣' : 'ให้ RN อีกคนตรวจนับ (แท็บ 🔍 ตรวจนับ)'}</p></div>
+      `<div class="res ok"><div class="big">📤</div><h2>ส่งตรวจแล้ว</h2><p>${c.drugs.length} ตัวยา · ${fmt(r.total)} เม็ด</p><p>${WEB ? 'ให้ RN อีกคนตรวจนับในเมนู 2️⃣' : 'ให้ RN อีกคนตรวจนับ (แท็บ 🔍 ตรวจนับ)'}</p><p class="meta">ถ้าเวรนี้มีพยาบาลคนเดียว ตรวจนับเองได้ในเมนู ② (ระบบจะติดป้าย ⚠️ ตรวจคนเดียว)</p></div>
        <div class="note">${same ? esc(c.name) + ' ยังเหลืออีก ' + cups.filter(x=>x.name===c.name&&x.room===c.room&&(x.status==='รอจัด'||x.status==='ไม่ตรง')).length + ' ถ้วย · ' : ''}${leftN ? 'รอจัดทั้งหมด ' + leftN + ' ถ้วย' : '🎉 จัดครบทุกถ้วยแล้ว'}</div>
        <div class="bottom">${same ? `<button class="btn main" onclick="openPrep('${esc(same.id)}')">➡️ คนเดิม มื้อ${esc(same.round)} (${same.drugs.length} ตัวยา)</button>` : ''}
         ${nx ? `<button class="btn ${same?'ghost':'main'}" style="width:100%;margin-top:8px" onclick="openPrep('${esc(nx.id)}')">👤 คนถัดไป: ${esc(nx.name)} · ${esc(nx.round)}</button>` : ''}
