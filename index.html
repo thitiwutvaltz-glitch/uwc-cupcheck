@@ -55,7 +55,7 @@ header .sub{font-size:13px;opacity:.85;font-weight:400}
 .drug{padding:10px 0;border-top:1px solid var(--line)}
 .drug:first-of-type{border-top:0}
 .dn{font-weight:700}
-.nums{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}
+.nums{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
 .nb{height:48px;border-radius:10px;border:1.5px solid var(--line);background:#fff;font:inherit;font-size:19px;font-weight:600;cursor:pointer;color:var(--ink)}
 .nb.on{background:var(--pri);border-color:var(--pri);color:#fff}
 .other{display:none;align-items:center;gap:10px;margin-top:8px}.other.show{display:flex}
@@ -121,7 +121,9 @@ let PREP = QS.get('m')==='prep'; let RX = QS.get('m')==='rx'; let RXR = [], rxQ 
 let NURSE = null, ME = null, NA = null, STAFF = [], cups = [], view = {screen:'list', tab:'รอตรวจ'}, work = null, busy = false, lastErr = '';
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
-const fmt = n => n === 0.5 ? '½' : (n % 1 === 0.5 ? Math.floor(n) + '½' : String(n));
+const fmt = n => { const w = Math.floor(n), f = Math.round((n - w) * 100) / 100, q = {0.25:'¼', 0.5:'½', 0.75:'¾'}[f]; return q ? (w ? w + q : q) : String(n); };
+// ขั้น +/− ของจำนวนเม็ด: ไม่เกิน 1 เม็ดทีละ ¼ เกิน 1 เม็ดทีละ ½ (มีคนไข้ทาน ¼ เม็ด — แจ้ง 26/11/2569)
+const qStep = (v, dir) => dir > 0 ? (v < 1 ? 0.25 : 0.5) : (v <= 1 ? -0.25 : -0.5);
 
 async function api(action, data){
   const auth = WEB ? {key:WEB.key, by:WEB.by} : {idToken: liff.getIDToken()};
@@ -170,7 +172,7 @@ function showGuide(){
     'ถ่ายรูปยาให้เห็นฉลาก (กี่รูปก็ได้) → กด <b>✅ บันทึกรับยา</b>']) +
   g('➕','ยาใหม่ (ยังไม่มีในรายการ)','',[
     '① <b>เลือกยา</b>: พิมพ์ชื่อ (ไทย/อังกฤษ) แตะยาที่ขึ้น · ไม่มีในรายการ กด ✏️ ใช้ชื่อที่พิมพ์ → เลือกความแรง หน่วย และ ยาประจำ / PRN',
-    '② <b>วิธีกิน</b>: แตะตามฉลาก ไม่เจอกด <b>แบบอื่น ▾</b> (คนไข้ฟีดขึ้นเวลาแบบฟีดให้เอง · ยาฉีดเลือกเวลาฉีดได้) → ครั้งละกี่เม็ด (+/− ทีละ ½) → เก็บที่ตลับจัดยา/หัวเตียง',
+    '② <b>วิธีกิน</b>: แตะตามฉลาก ไม่เจอกด <b>แบบอื่น ▾</b> (คนไข้ฟีดขึ้นเวลาแบบฟีดให้เอง · ยาฉีดเลือกเวลาฉีดได้) → ครั้งละกี่เม็ด (+/− ทีละ ¼ จนถึง 1 เม็ด เกินนั้นทีละ ½) → เก็บที่ตลับจัดยา/หัวเตียง',
     'ใส่จำนวนที่ญาตินำมา + ถ่ายรูปฉลาก (ยังไม่ได้รับยา ใส่ 0 ได้)',
     '③ <b>ยืนยัน</b>: ตรวจสรุป → ✅ บันทึกยาใหม่'
   ], 'ยาประจำเข้าถ้วยที่ยังรอจัดของวันนี้ทันที (มื้อที่จัดไปแล้วไม่เปลี่ยน)') +
@@ -324,7 +326,7 @@ function nmBack(){ const w = work; if (busy) return; if (w.step > (w.change?2:1)
 async function nmOpenChange(id){ const old = work.meds.find(m=>m.id===id); if (!old) return; const res = work.res, raw = old.raw||{};
   loading('กำลังโหลด…');
   try{ const f = await api('rxFreq',{residentId:res.id}); const list = (old.type==='PRN' ? f.prn : f.freq);
-    work = {nm:true, change:old, res, step:2, q:'', drug:null, name:raw.n||old.name, strength:raw.s||'', unit:old.unit||'เม็ด', type:old.type==='PRN'?'PRN':'ประจำ', freq: list.includes(raw.f) ? raw.f : '', more:false, dose: raw.q || (()=>{ const m = String(old.dose||'').match(/(\d+(?:\.\d+)?)/); return m ? Math.max(0.5, Number(m[1])) : 1; })(), ftime: raw.ft||'', storage: old.storage==='หัวเตียง'?'หัวเตียง':'ตลับจัดยา', instr: raw.ins||'', qty:0, exp:'', photos:[], up:0, note:'', fi:f};
+    work = {nm:true, change:old, res, step:2, q:'', drug:null, name:raw.n||old.name, strength:raw.s||'', unit:old.unit||'เม็ด', type:old.type==='PRN'?'PRN':'ประจำ', freq: list.includes(raw.f) ? raw.f : '', more:false, dose: raw.q || (()=>{ const m = String(old.dose||'').match(/(\d+(?:\.\d+)?)/); return m ? Math.max(0.25, Number(m[1])) : 1; })(), ftime: raw.ft||'', storage: old.storage==='หัวเตียง'?'หัวเตียง':'ตลับจัดยา', instr: raw.ins||'', qty:0, exp:'', photos:[], up:0, note:'', fi:f};
     lastErr=''; renderNm(); window.scrollTo(0,0); }
   catch(e){ lastErr = e.message; openRx(res.id, 'pick'); } }
 function nmHead(){ const w = work; return `<header><button class="back" onclick="nmBack()" aria-label="กลับ">‹</button><h1>${w.change?'✏️ เปลี่ยนวิธีกิน / ขนาด':'➕ เพิ่มยาใหม่'}<div class="sub">${esc(w.res.name)} · ห้อง ${esc(w.res.room||'-')}</div></h1></header>`; }
@@ -361,7 +363,7 @@ function nmStep2(){ const w = work, all = nmFreqs();
       ${showMore && w.type!=='PRN' ? `<select class="rxn" style="margin-top:8px" onchange="nmSet('freq',this.value)"><option value="">— เลือกวิธีกินแบบอื่น —</option>${all.map(f=>`<option ${w.freq===f?'selected':''} value="${esc(f)}">${esc(f)}</option>`).join('')}</select>` : ''}
       ${w.freq?`<div class="rxa" style="margin-top:8px">✓ ${esc(w.freq)}</div>`:''}
       ${ft?`<h2 style="margin:12px 0 8px">เวลาฉีด</h2><div class="chips">${ft.map(o=>nmChip(w.ftime===o[0], esc(o[1]), `nmSet('ftime','${o[0]}')`)).join('')}</div>`:''}</div>
-    <div class="sec"><h2 style="margin:0 0 8px">ครั้งละ</h2><div class="rxq"><button class="pm" onclick="nmDose(-0.5)" aria-label="ลด">−</button><b style="font-size:22px;min-width:60px;text-align:center">${fmt(w.dose)}</b><button class="pm" onclick="nmDose(0.5)" aria-label="เพิ่ม">+</button><span class="un">${esc(w.unit)}</span></div></div>
+    <div class="sec"><h2 style="margin:0 0 8px">ครั้งละ</h2><div class="rxq"><button class="pm" onclick="nmDose(-1)" aria-label="ลด">−</button><b style="font-size:22px;min-width:60px;text-align:center">${fmt(w.dose)}</b><button class="pm" onclick="nmDose(1)" aria-label="เพิ่ม">+</button><span class="un">${esc(w.unit)}</span></div></div>
     <div class="sec"><h2 style="margin:0 0 8px">เก็บยาที่</h2><div class="chips">${nmChip(w.storage==='ตลับจัดยา','ตลับจัดยา',"nmSet('storage','ตลับจัดยา')")}${nmChip(w.storage==='หัวเตียง','หัวเตียง',"nmSet('storage','หัวเตียง')")}</div>
       <input class="rxn" style="margin-top:8px" placeholder="คำแนะนำเพิ่มเติม (ถ้ามี) เช่น เคี้ยวก่อนกลืน" value="${esc(w.instr)}" onchange="work.instr=this.value"></div>
     ${w.change ? `<div class="sec"><h2 style="margin:0 0 8px">ประเภท</h2><div class="chips">${nmChip(w.type==='ประจำ','ยาประจำ',"nmSet('type','ประจำ')")}${nmChip(w.type==='PRN','PRN (เมื่อมีอาการ)',"nmSet('type','PRN')")}</div><input class="rxn" style="margin-top:10px" placeholder="หมายเหตุ เช่น หมอนัด 16/11 สั่งเพิ่มขนาด" value="${esc(w.note)}" onchange="work.note=this.value"></div>` : `<div class="sec"><h2 style="margin:0 0 8px">💊 ญาตินำมากี่${esc(w.unit)}</h2><div class="rxq"><span class="lb">รับมา</span><button class="pm" onclick="nmQty(-1)" aria-label="ลด">−</button><input type="number" inputmode="numeric" min="0" value="${w.qty||''}" placeholder="0" onchange="nmQtySet(this.value)"><button class="pm" onclick="nmQty(1)" aria-label="เพิ่ม">+</button><span class="un">${esc(w.unit)}</span></div>
@@ -369,7 +371,7 @@ function nmStep2(){ const w = work, all = nmFreqs();
       <div class="rxx"><label>หมดอายุ <input type="month" value="${esc(w.exp)}" onchange="work.exp=this.value"></label></div>
       <h2 style="margin:12px 0 8px">📷 รูปยา/ฉลาก ${w.qty?'<small style="color:var(--bad)">(ต้องมี)</small>':''}</h2><div class="rxp">${ph}<label><span>📷</span>ถ่ายรูป<input type="file" accept="image/*" capture="environment" style="display:none" onchange="nmPhoto(this)"></label></div>
       <input class="rxn" style="margin-top:8px" placeholder="หมายเหตุ เช่น ญาติที่นำยามา" value="${esc(w.note)}" onchange="work.note=this.value"></div>`}`; }
-function nmDose(d){ const w = work; w.dose = Math.max(0.5, Math.min(20, w.dose + d)); renderNm(); }
+function nmDose(dir){ const w = work; w.dose = Math.max(0.25, Math.min(20, Math.round((w.dose + qStep(w.dose, dir)) * 4) / 4)); renderNm(); }
 function nmQty(d){ nmQtySet((work.qty||0) + d); }
 function nmQtySet(v){ work.qty = Math.max(0, Math.min(5000, Math.round(Number(v)||0))); renderNm(); }
 function nmStep3(){ const w = work, nPh = w.photos.filter(p=>p.file).length;
@@ -517,12 +519,12 @@ function renderList(){ if (!Array.isArray(cups)) cups = []; if (RX) return rende
 function openCup(id){ view = {screen:'check', cupId:id, tab:'รอตรวจ'}; work = {counts:{}, other:{}, photo:null, up:null, file:null, upErr:''}; renderCheck(true); }
 function renderCheck(top){
   const c = cups.find(x=>x.id===view.cupId), y = window.scrollY;
-  const preset = [0,0.5,1,2,3];
+  const preset = [0,0.25,0.5,1,2,3];
   const drugs = c.drugs.map(d=>{ const v = work.counts[d.id]; const isO = v!==undefined && !preset.includes(v);
     return `<div class="drug"><div class="dn">${esc(d.n)}</div>
      <div class="nums">${preset.map(p=>`<button class="nb ${v===p?'on':''}" onclick="setC('${esc(d.id)}',${p})">${fmt(p)}</button>`).join('')}
      <button class="nb ${isO||work.other[d.id]?'on':''}" onclick="togO('${esc(d.id)}')">${isO?fmt(v):'อื่น'}</button></div>
-     <div class="other ${work.other[d.id]?'show':''}"><button class="step" onclick="stepC('${esc(d.id)}',-0.5)">−</button><span class="ov">${v===undefined?'–':fmt(v)}</span><button class="step" onclick="stepC('${esc(d.id)}',0.5)">+</button><span class="meta">ทีละ ½ เม็ด</span></div></div>`; }).join('');
+     <div class="other ${work.other[d.id]?'show':''}"><button class="step" onclick="stepC('${esc(d.id)}',-1)">−</button><span class="ov">${v===undefined?'–':fmt(v)}</span><button class="step" onclick="stepC('${esc(d.id)}',1)">+</button><span class="meta">ทีละ ¼ / ½ เม็ด</span></div></div>`; }).join('');
   const left = c.drugs.filter(d=>work.counts[d.id]===undefined).length;
   const hint = [left?`ยังไม่ได้นับ ${left} ตัวยา`:'', !work.photo?'ยังไม่ถ่ายรูป':''].filter(Boolean).join(' · ');
   $('app').innerHTML = head(esc(c.name), `ห้อง ${esc(c.room)} · ${esc(c.round)} ${esc(c.timing)}`, true) + errBox() +
@@ -536,7 +538,7 @@ function renderCheck(top){
 }
 function setC(id,v){ work.counts[id]=v; work.other[id]=false; renderCheck(); }
 function togO(id){ work.other[id]=!work.other[id]; if (work.other[id] && work.counts[id]===undefined) work.counts[id]=4; renderCheck(); }
-function stepC(id,d){ work.counts[id]=Math.max(0,(work.counts[id]??4)+d); renderCheck(); }
+function stepC(id,dir){ const v = work.counts[id]??4; work.counts[id]=Math.max(0, Math.round((v + qStep(v, dir)) * 4) / 4); renderCheck(); }
 function gotPhoto(inp){
   const f = inp.files && inp.files[0]; if (!f) return;
   const img = new Image(); img.onload = () => {
